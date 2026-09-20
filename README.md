@@ -1,96 +1,110 @@
 # ∑ AlgebraAce
 
-An interactive, IXL-inspired algebra learning website. Students practice randomly
-generated algebra problems, climb an IXL-style **SmartScore (0–100)** on every
-skill, and earn medals, badges, stars, and confetti celebrations along the way.
+An interactive, IXL-inspired algebra learning platform. Students practice
+randomly generated algebra problems, climb an IXL-style **SmartScore (0–100)**
+on every skill, complete daily and teacher-assigned homework, and earn medals,
+badges, and stars. Teachers assign exercises and track per-student progress.
 
-## Run it
+**Stack:** React 18 + Vite · Node.js + Express · PostgreSQL (JWT auth, bcrypt)
 
-No build step or server required — it's a pure static site:
+## Quick start
 
 ```bash
-# Option 1: just open the file
-open index.html            # macOS
-xdg-open index.html        # Linux
+# 1. install dependencies
+npm run setup
 
-# Option 2: serve it (nicer URLs, same behavior)
-python3 -m http.server 8000
-# then visit http://localhost:8000
+# 2. start PostgreSQL (Docker)
+npm run db                       # docker compose up -d db
+
+# 3. run the API server (http://localhost:3001)
+npm run dev:server
+
+# 4. in another terminal, run the React dev server (http://localhost:5173)
+npm run dev:client               # proxies /api → :3001
 ```
+
+Open **http://localhost:5173** and sign up as a student and/or teacher.
+
+### Production mode
+
+```bash
+npm run build                    # builds client → client/dist
+npm start                        # Express serves API + built client on :3001
+```
+
+Configuration via environment variables: `DATABASE_URL`
+(default `postgres://postgres:postgres@localhost:5432/algebraace`),
+`JWT_SECRET`, `PORT`.
+
+### Tests
+
+```bash
+npm test                         # 9 end-to-end API tests (pg-mem, no DB needed)
+```
+
+Covers: auth + validation, SmartScore updates, medals/stars/badges,
+homework completing at exactly the assigned question count, daily homework,
+time tracking, and teacher/student authorization rules.
 
 ## Features
 
-### 📝 Daily homework (student view)
-- A **new exercise set every day** (3 skills × 5 questions, auto-generated per date)
-- Homework completes after answering the assigned **number of questions per skill**
-  (wrong answers still count as answered) — SmartScore mastery is NOT required
-- Skills with unfinished homework are tagged **📝 HW** on the Skills page, and
-  clicking them routes straight into the homework session so every answer counts
-- **Resume-able progress** — leave mid-homework and pick up where you left off
-- Completing homework earns **+5 ⭐**, confetti, and homework badges
-  (📝 Homework Hero, 🗓️ Steady Scholar, 🏫 Teacher's Favorite)
-- "Due today" and "Coming up this week" views
+### 🎒 Students
+- **15 skills across 8 algebra topics** — expressions, equations, inequalities,
+  slope & linear functions, exponents, systems, quadratics, word problems —
+  with infinitely generated questions and step-by-step explanations
+- **IXL-style SmartScore (0–100)** per skill, computed server-side: fast gains
+  early, steep penalties in the Challenge Zone (90+), mastery at 100
+- **Rewards**: 🥉70 / 🥈90 / 🥇100 medals, 21 badges, stars, confetti
+- **Daily homework**: a fresh auto-generated set every day (3 skills × 5
+  questions), resume-able, completes at the assigned question count
+- **My Progress dashboard** and **Awards** gallery
 
-### 🍎 Teacher accounts
-- Choose **🎒 Student** or **🍎 Teacher** when signing up
-- **Assign tab**: pick a student, a due date, any set of skills, and questions
-  per skill — the assignment appears on the student's Homework page that day
-- **Students tab**: per-student totals (SmartScore, skills mastered, accuracy,
-  time, homework count, stars) with expandable topic breakdowns and
-  per-assignment completion status (⬜ not started / ⏳ in progress / ✅ done)
-- Assignments can be deleted; completion is tracked live as the student works
-
-### 👤 User accounts & progress tracking
-- Sign up / log in (accounts stored in the browser's `localStorage` — per-device demo accounts)
-- Every question answered, SmartScore, streak, medal, badge, and minute practiced
-  is saved to the student's account automatically
-- **My Progress** dashboard: total SmartScore, skills mastered, accuracy, best
-  streak, time practiced, and a per-skill breakdown
-
-### 🧠 IXL-style SmartScore engine
-- Each skill has a score from 0 to 100
-- Big gains early, small gains and steep penalties in the **Challenge Zone (90+)**
-- 100 = **mastery** 🥇
-
-### 🏅 Rewards & encouragement (like IXL)
-- **Medals per skill**: 🥉 bronze at 70, 🥈 silver at 90, 🥇 gold at 100
-- **18 badges**: First Steps, Century Club, On Fire (5-streak), Algebra Royalty
-  (master 8 skills), Star Collector, Homework Hero, and more
-- **Stars** ⭐ earned for every medal and badge (shown in the top bar)
-- **Confetti burst** + toast notifications on mastery
-- Praise messages for correct answers, warm encouragement plus
-  **step-by-step explanations** for wrong ones
-
-### 📚 15 skills across 8 topics (infinitely generated questions)
-| Topic | Skills |
-|---|---|
-| 🧮 Expressions | Evaluate expressions, combine like terms |
-| ➕ One-step equations | Add/subtract, multiply/divide |
-| 🔀 Multi-step equations | Two-step, variables on both sides |
-| ⚖️ Inequalities | One-step, two-step (with sign-flip!) |
-| 📈 Slope & linear functions | Slope from points, evaluate, y-intercept |
-| 💪 Exponents | Product rule, power of a power, negative exponents |
-| 🤝 Systems of equations | Solve 2×2 systems |
-| 🎯 Quadratics & word problems | Factor x²+bx+c=0, linear word problems |
+### 🍎 Teachers
+- Assign exercises: student, due date, any skills, questions per skill
+- Track every student: totals, per-topic breakdowns, and per-assignment
+  status (⬜ not started / ⏳ in progress / ✅ done), updated live
 
 ## Project structure
 
 ```
-index.html        # app shell (auth, skills, practice, dashboard, awards screens)
-css/styles.css    # all styling
-js/skills.js      # skill definitions + random question generators + awards list
-js/app.js         # accounts, SmartScore engine, practice flow, rewards, confetti
+docker-compose.yml        # PostgreSQL 16
+server/
+  src/index.js            # entrypoint (pg Pool, static serving)
+  src/app.js              # Express app + all routes
+  src/db.js               # data access layer (all SQL)
+  src/schema.sql          # tables: users, stats, skill_progress, awards,
+                          #   assignments, homework_progress, homework_completed
+  src/scoring.js          # SmartScore engine
+  src/awards.js           # badge definitions + checks
+  test/api.test.js        # E2E API tests on pg-mem
+client/
+  src/App.jsx             # shell, routing, toasts
+  src/api.js              # fetch wrapper w/ JWT
+  src/skills.js           # question generators (shared topic catalog)
+  src/homework.js         # daily-set computation + homework helpers
+  src/components/         # Auth, SkillsPage, PracticePage, HomeworkPage,
+                          # DashboardPage, AwardsPage, TeacherStudents,
+                          # TeacherAssign, Confetti, Medallion
+legacy-static/            # original no-backend prototype (kept for reference)
 ```
+
+## API overview
+
+| Endpoint | Description |
+|---|---|
+| `POST /api/auth/signup` `/login` | JWT auth (roles: student, teacher) |
+| `GET /api/me` | profile, stats, skill progress, awards |
+| `POST /api/answers` | record an answer → SmartScore, medals, stars, homework progress, badges |
+| `POST /api/time` | accumulate practice time |
+| `GET /api/homework` | student's assignments + daily progress |
+| `GET /api/students` | (teacher) all students with progress |
+| `POST/GET/DELETE /api/assignments` | (teacher) manage assignments |
+| `GET /api/meta/awards` | badge catalog for the awards page |
 
 ## Notes
 
-- Accounts (students + teachers) and assignments are stored in the browser's
-  `localStorage`, so **a teacher and their students must use the same
-  browser/device** in this demo. To go multi-device, swap the `localStorage`
-  layer in `js/app.js` (`loadUsers`/`saveUsers`/`loadAssignments`/
-  `saveAssignments`) for a small backend — the data models are cleanly separated.
-- Passwords are lightly hashed and stored only in your browser — this is a
-  **local demo**, not production-grade auth.
-- Tested: 3,000 generated questions per skill validated for correctness, plus a
-  scripted end-to-end homework flow test (assign → start → answer → complete →
-  teacher sees ✅).
+- Question generation happens client-side; the server owns all
+  scoring/progress accounting. A future hardening step is server-issued
+  question sessions so answers are verified server-side.
+- The legacy static prototype (localStorage-based) is preserved in
+  `legacy-static/` — open `legacy-static/index.html` to compare.
