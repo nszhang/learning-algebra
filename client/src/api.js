@@ -1,4 +1,9 @@
 // Tiny API client with JWT handling.
+// BASE_URL lets the app live under a subpath (e.g. /learning-algebra/):
+// built output calls /learning-algebra/api/..., dev output calls /api/...
+// (which the Vite dev server proxies to :3001).
+const BASE = (import.meta.env.BASE_URL || '/').replace(/\/$/, '');
+
 let token = localStorage.getItem('aa_token') || null;
 
 export function setToken(t) {
@@ -8,7 +13,7 @@ export function setToken(t) {
 }
 
 export async function api(method, path, body) {
-  const res = await fetch(path, {
+  const res = await fetch(BASE + path, {
     method,
     headers: {
       'Content-Type': 'application/json',
