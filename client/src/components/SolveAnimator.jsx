@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   LEVELS, generateEquation, applyOp, cancelledIds,
   fmtSignedCoef, fmtSigned, termText
 } from '../lesson.js';
 
-const PHASE_MS = { op: 1100, cancel: 900 };
+const SPEEDS = {
+  slow:   { label: '🐢 Slow',   op: 1700, cancel: 1300, gap: 1200 },
+  normal: { label: '🚶 Normal', op: 1100, cancel: 900,  gap: 700 },
+  fast:   { label: '🐇 Fast',   op: 550,  cancel: 400,  gap: 300 }
+};
 
 function TermChip({ term, first, fading }) {
   return (
@@ -41,48 +45,81 @@ export default function SolveAnimator({ toast, fireConfetti }) {
   const [left, setLeft] = useState(eq.left);
   const [right, setRight] = useState(eq.right);
   const [stepIdx, setStepIdx] = useState(0);
-  const [phase, setPhase] = useState('idle'); // 'idle' | 'op' | 'cancel'
+  const [phase, setPhase] = useState('idle');   // 'idle' | 'op' | 'cancel'
   const [playing, setPlaying] = useState(false);
+  const [paused, setPaused] = useState(false);  // freezes mid-phase
   const [done, setDone] = useState(false);
-  const timers = useRef([]);
+  const [speed, setSpeed] = useState('normal');
+  const [history, setHistory] = useState([]);   // snapshots before each step
 
-  const later = (fn, ms) => timers.current.push(setTimeout(fn, ms));
-  useEffect(() => () => timers.current.forEach(clearTimeout), []);
+  const d = SPEEDS[speed];
+  const currentOp = stepIdx < eq.steps.length ? eq.steps[stepIdx].op : null;
 
-  function newEquation(lv = level) {
-    timers.current.forEach(clearTimeout);
-    const e = generateEquation(lv);
-    setEq(e); setLeft(e.left); setRight(e.right);
-    setStepIdx(0); setPhase('idle'); setPlaying(false); setDone(false);
+  function finishEquation() {
+    setDone(true);
+    setPlaying(false);
+    fireConfetti?.();
+    toast?.('🎓', `Solved! x = ${eq.solution}`);
   }
 
-  function runStep() {
-    if (stepIdx >= eq.steps.length || phase !== 'idle') return;
-    setPhase('op');
-    later(() => setPhase('cancel'), PHASE_MS.op);
-    later(() => {
-      const [l, r] = applyOp(left, right, eq.steps[stepIdx].op);
-      setLeft(l); setRight(r);
-      const next = stepIdx + 1;
-      setStepIdx(next);
-      setPhase('idle');
-      if (next >= eq.steps.length) {
-        setDone(true);
-        setPlaying(false);
-        fireConfetti?.();
-        toast?.('🎓', `Solved! x = ${eq.solution}`);
-      }
-    }, PHASE_MS.op + PHASE_MS.cancel);
+  function commitStep() {
+    const [l, r] = applyOp(left, right, eq.steps[stepIdx].op);
+    setHistory(h => [...h, { left, right }]);
+    setLeft(l); setRight(r);
+    const next = stepIdx + 1;
+    setStepIdx(next);
+    setPhase('idle');
+    if (next >= eq.steps.length) finishEquation();
   }
 
-  // autoplay
+  // phase progression: runs whenever a phase is active and not frozen
   useEffect(() => {
-    if (!playing || phase !== 'idle' || done) return;
-    const t = setTimeout(runStep, 700);
+    if (phase === 'idle' || paused) return;
+    if (phase === 'op') {
+      const t = setTimeout(() => setPhase('cancel'), d.op);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(commitStep, d.cancel);
+    return () => clearTimeout(t);
+  }); // intentionally dep-free: closures stay fresh every render
+
+  // autoplay: start the next step after a gap
+  useEffect(() => {
+    if (!playing || paused || phase !== 'idle' || done) return;
+    const t = setTimeout(() => setPhase('op'), d.gap);
     return () => clearTimeout(t);
   });
 
-  const currentOp = stepIdx < eq.steps.length ? eq.steps[stepIdx].op : null;
+  function newEquation(lv = level) {
+    const e = generateEquation(lv);
+    setEq(e); setLeft(e.left); setRight(e.right);
+    setStepIdx(0); setPhase('idle'); setPlaying(false); setPaused(false);
+    setDone(false); setHistory([]);
+  }
+
+  function playPause() {
+    if (done) { newEquation(); setPlaying(true); return; }
+    if (playing) { setPlaying(false); setPaused(true); return; }  // freeze now
+    setPlaying(true); setPaused(false);
+    if (phase === 'idle') setPhase('op');
+  }
+
+  function stepForward() {
+    if (done) return;
+    setPlaying(false); setPaused(false);
+    if (phase === 'idle') setPhase('op');   // phase chain completes this one step
+  }
+
+  function stepBack() {
+    if (phase !== 'idle' || stepIdx === 0) return;
+    const prev = history[stepIdx - 1];
+    setLeft(prev.left); setRight(prev.right);
+    setHistory(h => h.slice(0, stepIdx - 1));
+    setStepIdx(stepIdx - 1);
+    setDone(false);
+  }
+
+  const busy = phase !== 'idle';
 
   return (
     <div className="learn-grid">
@@ -97,15 +134,31 @@ export default function SolveAnimator({ toast, fireConfetti }) {
               </button>
             ))}
           </div>
-          <div>
-            <button className="btn btn-primary" type="button"
-              onClick={() => (playing ? setPlaying(false) : (done ? (newEquation(), setPlaying(true)) : setPlaying(true)))}
-              disabled={phase !== 'idle' && !playing}>
-              {playing ? '⏸ Pause' : done ? '↺ Again' : stepIdx > 0 ? '▶ Resume' : '▶ Play'}
+          <div className="level-tabs">
+            {Object.entries(SPEEDS).map(([id, s]) => (
+              <button key={id} type="button"
+                className={'role-tab' + (speed === id ? ' active' : '')}
+                onClick={() => setSpeed(id)}>
+                {s.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="lesson-controls">
+          <div className="anim-controls">
+            <button className="btn btn-primary" type="button" onClick={playPause}>
+              {playing ? '⏸ Pause' : done ? '↺ Replay' : paused || stepIdx > 0 ? '▶ Resume' : '▶ Play'}
             </button>
-            <button className="btn btn-ghost" type="button" onClick={runStep}
-              disabled={playing || phase !== 'idle' || done}>⏭ Step</button>
+            <button className="btn btn-ghost" type="button" onClick={stepBack}
+              disabled={playing || busy || stepIdx === 0}>⏮ Back</button>
+            <button className="btn btn-ghost" type="button" onClick={stepForward}
+              disabled={playing || done}>⏭ Step</button>
             <button className="btn btn-ghost" type="button" onClick={() => newEquation()}>🎲 New equation</button>
+          </div>
+          <div className="anim-progress muted">
+            {done ? 'Solved!' : `Step ${Math.min(stepIdx + 1, eq.steps.length)} of ${eq.steps.length}`}
+            {paused && busy && ' • ⏸ paused'}
           </div>
         </div>
 
@@ -115,7 +168,6 @@ export default function SolveAnimator({ toast, fireConfetti }) {
             <span className="eq-equals">=</span>
             <Side terms={right} op={currentOp} phase={phase} />
           </div>
-          {/* balance beam */}
           <div className="balance">
             <div className="balance-beam" />
             <div className="balance-fulcrum" />

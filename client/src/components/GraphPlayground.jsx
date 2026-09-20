@@ -40,6 +40,22 @@ export default function GraphPlayground({ toast, fireConfetti }) {
 
   const change = setter => e => setter(Number(e.target.value));
 
+  // − / + buttons that nudge a value in clean increments (works even where
+  // range-slider dragging is awkward)
+  function Stepper({ value, set, step, min, max }) {
+    const nudge = dir => set(Math.min(max, Math.max(min, Math.round((value + dir * step) / step) * step)));
+    return (
+      <div className="stepper">
+        <button type="button" className="btn btn-ghost stepper-btn"
+          onClick={() => nudge(-1)} disabled={value <= min} aria-label="decrease">−</button>
+        <input type="range" min={min} max={max} step={step} value={value}
+          onChange={change(set)} aria-label="slider" />
+        <button type="button" className="btn btn-ghost stepper-btn"
+          onClick={() => nudge(1)} disabled={value >= max} aria-label="increase">+</button>
+      </div>
+    );
+  }
+
   // celebrate once per match
   useEffect(() => {
     if (matched && !won) {
@@ -123,11 +139,18 @@ export default function GraphPlayground({ toast, fireConfetti }) {
         <h4>🎛️ Controls</h4>
         <label className="slider-row">
           <span><strong>m</strong> (slope) = <strong className="slider-val">{fmtNum(m)}</strong></span>
-          <input type="range" min="-5" max="5" step="0.5" value={m} onChange={change(setM)} />
+          <Stepper value={m} set={setM} step={0.5} min={-5} max={5} />
         </label>
+        <div className="preset-row">
+          {[-2, -1, 0, 1, 2].map(v => (
+            <button key={v} type="button"
+              className={'preset-btn' + (m === v ? ' active' : '')}
+              onClick={() => setM(v)}>m = {fmtNum(v)}</button>
+          ))}
+        </div>
         <label className="slider-row">
           <span><strong>b</strong> (y-intercept) = <strong className="slider-val">{fmtNum(b)}</strong></span>
-          <input type="range" min="-10" max="10" step="1" value={b} onChange={change(setB)} />
+          <Stepper value={b} set={setB} step={1} min={-10} max={10} />
         </label>
         <div className="graph-facts">
           <p>📈 <strong>Slope m</strong> = rise ÷ run. Watch the orange triangle: for every 1 step right, the line rises by m.</p>

@@ -539,6 +539,19 @@ body {
 .slider-row span { display: block; margin-bottom: 6px; }
 .slider-val { color: var(--primary); }
 .slider-row input[type="range"] { width: 100%; accent-color: var(--primary); }
+.stepper { display: flex; align-items: center; gap: 8px; }
+.stepper input[type="range"] { flex: 1; accent-color: var(--primary); }
+.stepper-btn { padding: 6px 13px; font-size: 1.1rem; font-weight: 800; }
+.preset-row { display: flex; gap: 6px; flex-wrap: wrap; margin: -8px 0 14px; }
+.preset-btn {
+  border: 2px solid var(--line); background: #fff; border-radius: 8px;
+  padding: 4px 10px; font: inherit; font-size: .82rem; font-weight: 700;
+  color: var(--muted); cursor: pointer;
+}
+.preset-btn:hover { border-color: var(--primary); color: var(--primary); }
+.preset-btn.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+.anim-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+.anim-progress { font-size: .9rem; align-self: center; }
 .graph-facts p { font-size: .88rem; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
 
 /* ---------- shared vertical forms (admin, modals) ---------- */
