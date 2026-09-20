@@ -42,7 +42,7 @@ export default function Auth({ onAuth }) {
               onClick={() => { setMode('signup'); setError(''); }}>Sign up</button>
           </div>
 
-          <form onSubmit={submit} autoComplete="off">
+          <form id="form-auth" onSubmit={submit} autoComplete="off">
             <label>Username
               <input type="text" maxLength="20" required placeholder="e.g. math_wizard"
                 value={username} onChange={e => setUsername(e.target.value)} />
