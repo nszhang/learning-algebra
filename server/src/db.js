@@ -9,6 +9,13 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export async function initSchema(pool) {
   const sql = fs.readFileSync(path.join(__dirname, 'schema.sql'), 'utf8');
   await pool.query(sql);
+  // Migration for installs created before the 'admin' role existed: the
+  // users.role CHECK only allowed student/teacher. Recreate it (no-op change
+  // for fresh DBs). Wrapped for in-memory test adapters that lack ALTER TABLE.
+  try {
+    await pool.query('ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check');
+    await pool.query("ALTER TABLE users ADD CONSTRAINT users_role_check CHECK (role IN ('student', 'teacher', 'admin'))");
+  } catch { /* pg-mem: fresh schema already has the right constraint */ }
 }
 
 // ---------- users ----------
@@ -149,11 +156,70 @@ export async function markHomeworkCompleted(pool, userId, assignmentId) {
 }
 
 // ---------- teacher views ----------
-export async function getStudentsWithStats(pool) {
+// teacherId optional: when given, only students in that teacher's roster.
+export async function getStudentsWithStats(pool, teacherId) {
+  const sql = `SELECT u.id, u.username, u.display_name, u.stars, u.created_at,
+            s.answered, s.correct, s.time_sec, s.best_streak, s.homework_done
+     FROM users u LEFT JOIN stats s ON s.user_id = u.id
+     WHERE u.role = 'student'
+     ORDER BY u.display_name`;
+  if (teacherId == null) {
+    const { rows } = await pool.query(sql);
+    return rows;
+  }
+  // plain JOIN (no correlated subquery — keeps the in-memory test DB happy)
   const { rows } = await pool.query(
     `SELECT u.id, u.username, u.display_name, u.stars, u.created_at,
             s.answered, s.correct, s.time_sec, s.best_streak, s.homework_done
-     FROM users u LEFT JOIN stats s ON s.user_id = u.id
-     WHERE u.role = 'student' ORDER BY u.display_name`, []);
+     FROM teacher_students ts
+     JOIN users u ON u.id = ts.student_id
+     LEFT JOIN stats s ON s.user_id = u.id
+     WHERE ts.teacher_id = $1 AND u.role = 'student'
+     ORDER BY u.display_name`, [teacherId]);
   return rows;
+}
+
+// ---------- user administration (admin) ----------
+export async function getAllUsers(pool) {
+  const { rows } = await pool.query(
+    'SELECT id, username, display_name, role, stars, created_at FROM users ORDER BY role, display_name');
+  return rows;
+}
+
+export async function updatePassHash(pool, userId, passHash) {
+  await pool.query('UPDATE users SET pass_hash = $2 WHERE id = $1', [userId, passHash]);
+}
+
+export async function deleteUser(pool, userId) {
+  const { rowCount } = await pool.query('DELETE FROM users WHERE id = $1', [userId]);
+  return rowCount > 0;
+}
+
+export async function countByRole(pool, role) {
+  const { rows } = await pool.query('SELECT count(*)::int AS n FROM users WHERE role = $1', [role]);
+  return rows[0].n;
+}
+
+// ---------- teacher rosters ----------
+export async function getTeacherStudentPairs(pool) {
+  const { rows } = await pool.query('SELECT teacher_id, student_id FROM teacher_students');
+  return rows;
+}
+
+// Replace a teacher's whole roster with the given student ids.
+// Caller validates that ids are existing students.
+export async function setTeacherStudents(pool, teacherId, studentIds) {
+  await pool.query('DELETE FROM teacher_students WHERE teacher_id = $1', [teacherId]);
+  for (const sid of studentIds) {
+    await pool.query(
+      'INSERT INTO teacher_students (teacher_id, student_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [teacherId, sid]);
+  }
+}
+
+export async function isTeacherOf(pool, teacherId, studentId) {
+  const { rowCount } = await pool.query(
+    'SELECT 1 FROM teacher_students WHERE teacher_id = $1 AND student_id = $2',
+    [teacherId, studentId]);
+  return rowCount > 0;
 }

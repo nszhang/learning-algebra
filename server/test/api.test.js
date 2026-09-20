@@ -1,20 +1,31 @@
 // End-to-end API tests against an in-memory PostgreSQL (pg-mem).
+// Account model: no public signup — an admin (seeded directly) creates
+// student/teacher accounts and assigns teacher rosters.
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { newDb } from 'pg-mem';
+import bcrypt from 'bcryptjs';
 import { createApp } from '../src/app.js';
-import { initSchema } from '../src/db.js';
+import { initSchema, createUser } from '../src/db.js';
 
-let server, base;
+let server, base, pool;
 
 before(async () => {
   const mem = newDb();
   const pgAdapter = mem.adapters.createPg();
-  const pool = new pgAdapter.Pool();
+  pool = new pgAdapter.Pool();
   await initSchema(pool);
   const app = createApp(pool, 'test-secret');
   await new Promise(resolve => { server = app.listen(0, resolve); });
   base = `http://localhost:${server.address().port}`;
+
+  // seed the bootstrap admin directly in the DB
+  await createUser(pool, {
+    username: 'admin',
+    displayName: 'Admin',
+    passHash: await bcrypt.hash('adminpw', 10),
+    role: 'admin'
+  });
 });
 
 after(() => server.close());
@@ -28,38 +39,101 @@ async function api(method, path, { token, body } = {}) {
     },
     body: body ? JSON.stringify(body) : undefined
   });
-  return { status: res.status, data: await res.json() };
+  return { status: res.status, data: await res.json().catch(() => ({})) };
 }
 
-let student, teacher;
+async function login(username, password) {
+  const r = await api('POST', '/api/auth/login', { body: { username, password } });
+  assert.equal(r.status, 200, `login ${username}`);
+  return r.data;
+}
 
-test('signup validates input', async () => {
-  let r = await api('POST', '/api/auth/signup', { body: { username: 'x', password: 'pw', role: 'student' } });
-  assert.equal(r.status, 400);
-  r = await api('POST', '/api/auth/signup', { body: { username: 'validuser', password: 'pw', role: 'wizard' } });
-  assert.equal(r.status, 400);
+let admin, student, teacher, student2;
+
+test('public signup is gone; login works', async () => {
+  let r = await api('POST', '/api/auth/signup',
+    { body: { username: 'hacker', password: 'pw123', role: 'teacher' } });
+  assert.equal(r.status, 404, 'public signup endpoint removed');
+
+  admin = await login('admin', 'adminpw');
+  assert.equal(admin.user.role, 'admin');
+
+  r = await api('POST', '/api/auth/login', { body: { username: 'admin', password: 'wrong' } });
+  assert.equal(r.status, 401);
 });
 
-test('student and teacher can sign up and log in', async () => {
-  let r = await api('POST', '/api/auth/signup',
-    { body: { username: 'stu1', displayName: 'Stu', password: 'pw123', role: 'student' } });
+test('admin creates accounts; validation rules', async () => {
+  let r = await api('POST', '/api/admin/users', { token: admin.token,
+    body: { username: 'x', role: 'student' } });
+  assert.equal(r.status, 400, 'bad username rejected');
+  r = await api('POST', '/api/admin/users', { token: admin.token,
+    body: { username: 'valid', role: 'wizard' } });
+  assert.equal(r.status, 400, 'bad role rejected');
+
+  r = await api('POST', '/api/admin/users', { token: admin.token,
+    body: { username: 'stu1', displayName: 'Stu', password: 'pw123', role: 'student' } });
   assert.equal(r.status, 200);
-  student = r.data;
-  assert.equal(student.user.role, 'student');
+  assert.equal(r.data.user.role, 'student');
+  assert.equal(r.data.generated, false);
 
-  r = await api('POST', '/api/auth/signup',
-    { body: { username: 'teach', displayName: 'Mrs Teach', password: 'pw123', role: 'teacher' } });
-  teacher = r.data;
-  assert.equal(teacher.user.role, 'teacher');
-
-  r = await api('POST', '/api/auth/login', { body: { username: 'stu1', password: 'wrong' } });
-  assert.equal(r.status, 401);
-  r = await api('POST', '/api/auth/login', { body: { username: 'stu1', password: 'pw123' } });
+  r = await api('POST', '/api/admin/users', { token: admin.token,
+    body: { username: 'stu2', displayName: 'Stu Two', role: 'student' } });
   assert.equal(r.status, 200);
+  assert.ok(r.data.password && r.data.generated, 'password auto-generated');
+  student2 = r.data;
 
-  r = await api('POST', '/api/auth/signup',
-    { body: { username: 'stu1', displayName: 'Dup', password: 'pw123', role: 'student' } });
+  r = await api('POST', '/api/admin/users', { token: admin.token,
+    body: { username: 'stu1', role: 'student' } });
   assert.equal(r.status, 409, 'duplicate username rejected');
+
+  r = await api('POST', '/api/admin/users', { token: admin.token,
+    body: { username: 'teach', displayName: 'Mrs Teach', password: 'pw123', role: 'teacher' } });
+  assert.equal(r.status, 200);
+  teacher = r.data;
+
+  student = await login('stu1', 'pw123');
+  teacher = await login('teach', 'pw123');
+});
+
+test('admin routes are admin-only', async () => {
+  let r = await api('GET', '/api/admin/users', { token: student.token });
+  assert.equal(r.status, 403);
+  r = await api('POST', '/api/admin/users', { token: teacher.token, body: {} });
+  assert.equal(r.status, 403);
+  r = await api('GET', '/api/admin/users');
+  assert.equal(r.status, 401);
+
+  r = await api('GET', '/api/admin/users', { token: admin.token });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.users.length, 4);
+  assert.ok(Array.isArray(r.data.rosters));
+});
+
+test('teacher sees only rostered students; assignments enforced', async () => {
+  let r = await api('GET', '/api/students', { token: teacher.token });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.length, 0, 'no roster yet — no students visible');
+
+  const today = new Date().toLocaleDateString('en-CA');
+  const stuId = student.user.id;
+  r = await api('POST', '/api/assignments', { token: teacher.token,
+    body: { studentId: stuId, due: today, items: [{ skillId: 'A1', count: 3 }] } });
+  assert.equal(r.status, 403, 'cannot assign homework outside roster');
+
+  // admin sets the roster: teacher -> stu1 only
+  r = await api('PUT', `/api/admin/teachers/${teacher.user.id}/students`,
+    { token: admin.token, body: { studentIds: [student.user.id] } });
+  assert.equal(r.status, 200);
+  assert.equal(r.data.count, 1);
+
+  // roster validation: non-student ids rejected
+  r = await api('PUT', `/api/admin/teachers/${teacher.user.id}/students`,
+    { token: admin.token, body: { studentIds: [admin.user.id] } });
+  assert.equal(r.status, 400);
+
+  r = await api('GET', '/api/students', { token: teacher.token });
+  assert.equal(r.data.length, 1);
+  assert.equal(r.data[0].username, 'stu1');
 });
 
 test('answering questions updates SmartScore, stats, and awards', async () => {
@@ -70,7 +144,6 @@ test('answering questions updates SmartScore, stats, and awards', async () => {
   assert.ok(r.data.newAwards.some(a => a.id === 'first'), 'First Steps badge earned');
   assert.ok(r.data.stars >= 2, 'badge stars granted');
 
-  // 12 more correct answers on B1 should reach at least bronze (70)
   for (let i = 0; i < 12; i++) {
     r = await api('POST', '/api/answers',
       { token: student.token, body: { skillId: 'B1', correct: true, streak: i + 2 } });
@@ -97,9 +170,8 @@ test('score never goes below 0 on wrong answers', async () => {
 
 test('teacher assigns homework; student completes at exactly N questions', async () => {
   const students = await api('GET', '/api/students', { token: teacher.token });
-  assert.equal(students.status, 200);
   const stu = students.data.find(s => s.username === 'stu1');
-  assert.ok(stu, 'teacher sees student');
+  assert.ok(stu, 'teacher sees rostered student');
 
   const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
   let r = await api('POST', '/api/assignments', {
@@ -109,14 +181,12 @@ test('teacher assigns homework; student completes at exactly N questions', async
   assert.equal(r.status, 200);
   const assignmentId = r.data.id;
 
-  // student fetches homework
   const hw = await api('GET', '/api/homework', { token: student.token });
   const a = hw.data.assignments.find(x => x.id === assignmentId);
   assert.equal(a.items[0].count, 10);
   assert.equal(a.done, 0);
   assert.equal(a.completed, false);
 
-  // answer 10 questions (2 wrong) — completion must trigger exactly at #10
   let justCompletedAt = -1;
   for (let i = 1; i <= 12; i++) {
     r = await api('POST', '/api/answers', {
@@ -128,7 +198,6 @@ test('teacher assigns homework; student completes at exactly N questions', async
   assert.equal(justCompletedAt, 10, 'homework completed at exactly 10 answers');
   assert.ok(r.data.homework.done >= 10);
 
-  // student + teacher both see completion
   const hw2 = await api('GET', '/api/homework', { token: student.token });
   assert.equal(hw2.data.assignments.find(x => x.id === assignmentId).completed, true);
   const list = await api('GET', '/api/assignments', { token: teacher.token });
@@ -184,4 +253,44 @@ test('teacher can delete own assignment only', async () => {
   assert.equal(del.status, 403);
   const del2 = await api('DELETE', `/api/assignments/${id}`, { token: teacher.token });
   assert.equal(del2.status, 200);
+});
+
+test('password change: requires current, invalidates old', async () => {
+  let r = await api('POST', '/api/auth/password', { token: student.token,
+    body: { currentPassword: 'wrong', newPassword: 'newpw99' } });
+  assert.equal(r.status, 403, 'wrong current password rejected');
+  r = await api('POST', '/api/auth/password', { token: student.token,
+    body: { currentPassword: 'pw123', newPassword: 'newpw99' } });
+  assert.equal(r.status, 200);
+  r = await api('POST', '/api/auth/login', { body: { username: 'stu1', password: 'pw123' } });
+  assert.equal(r.status, 401, 'old password no longer works');
+  r = await api('POST', '/api/auth/login', { body: { username: 'stu1', password: 'newpw99' } });
+  assert.equal(r.status, 200);
+  student = r.data;
+});
+
+test('admin resets passwords and deletes accounts', async () => {
+  // reset stu2's generated password
+  let r = await api('POST', `/api/admin/users/${student2.user.id}/password`,
+    { token: admin.token, body: {} });
+  assert.equal(r.status, 200);
+  assert.ok(r.data.generated);
+  const login2 = await api('POST', '/api/auth/login',
+    { body: { username: 'stu2', password: r.data.password } });
+  assert.equal(login2.status, 200, 'reset password works');
+
+  // roster cleanup then delete stu2
+  r = await api('PUT', `/api/admin/teachers/${teacher.user.id}/students`,
+    { token: admin.token, body: { studentIds: [student.user.id] } });
+  assert.equal(r.status, 200);
+  r = await api('DELETE', `/api/admin/users/${student2.user.id}`, { token: admin.token });
+  assert.equal(r.status, 200);
+  r = await api('POST', '/api/auth/login', { body: { username: 'stu2', password: 'whatever' } });
+  assert.equal(r.status, 401, 'deleted user cannot log in');
+
+  // guards
+  r = await api('DELETE', `/api/admin/users/${admin.user.id}`, { token: admin.token });
+  assert.equal(r.status, 400, 'cannot delete yourself');
+  r = await api('DELETE', '/api/admin/users/99999', { token: admin.token });
+  assert.equal(r.status, 404);
 });

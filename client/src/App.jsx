@@ -7,6 +7,8 @@ import DashboardPage from './components/DashboardPage.jsx';
 import AwardsPage from './components/AwardsPage.jsx';
 import TeacherStudents from './components/TeacherStudents.jsx';
 import TeacherAssign from './components/TeacherAssign.jsx';
+import AdminPage from './components/AdminPage.jsx';
+import ChangePassword from './components/ChangePassword.jsx';
 import PracticePage from './components/PracticePage.jsx';
 import Confetti from './components/Confetti.jsx';
 
@@ -30,6 +32,7 @@ export default function App() {
   const [toasts, setToasts] = useState([]);
   const [practiceCfg, setPracticeCfg] = useState(null);
   const [confettiTick, setConfettiTick] = useState(0);
+  const [showChpw, setShowChpw] = useState(false);
 
   const toast = useCallback((emoji, msg) => {
     const id = Math.random().toString(36);
@@ -47,7 +50,7 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
-      setPage(user.role === 'teacher' ? 'students' : 'home');
+      setPage(user.role === 'student' ? 'home' : user.role === 'teacher' ? 'students' : 'admin');
       refreshMe();
       if (user.role === 'student') refreshHomework();
     }
@@ -72,9 +75,12 @@ export default function App() {
   }
 
   const isTeacher = user.role === 'teacher';
-  const nav = isTeacher
-    ? [['students', '👥 Students'], ['assign', '📝 Assign']]
-    : [['home', '📚 Skills'], ['homework', '📝 Homework'], ['dashboard', '📊 My Progress'], ['awards', '🏆 Awards']];
+  const isAdmin = user.role === 'admin';
+  const nav = isAdmin
+    ? [['admin', '⚙️ Admin']]
+    : isTeacher
+      ? [['students', '👥 Students'], ['assign', '📝 Assign']]
+      : [['home', '📚 Skills'], ['homework', '📝 Homework'], ['dashboard', '📊 My Progress'], ['awards', '🏆 Awards']];
 
   const startSkill = skillId => setPracticeCfg({ mode: 'skill', skillId });
   const startHomework = assignment => setPracticeCfg({ mode: 'homework', assignment });
@@ -82,12 +88,13 @@ export default function App() {
   function exitPractice(cfg) {
     setPracticeCfg(null);
     refreshMe();
-    if (!isTeacher) refreshHomework();
+    if (user.role === 'student') refreshHomework();
     setPage(cfg.mode === 'homework' ? 'homework' : 'home');
   }
 
   return (<>
     <Confetti tick={confettiTick} />
+    {showChpw && <ChangePassword onClose={() => setShowChpw(false)} toast={toast} />}
     <header className="topbar">
       <div className="brand brand-sm">
         <span className="brand-logo">∑</span>
@@ -103,8 +110,10 @@ export default function App() {
         ))}
       </nav>
       <div className="user-chip">
-        {!isTeacher && <span className="stars-chip">⭐ {me?.user?.stars ?? user.stars}</span>}
+        {user.role === 'student' && <span className="stars-chip">⭐ {me?.user?.stars ?? user.stars}</span>}
         <span className="greeting">Hi, {user.displayName}!</span>
+        <button className="btn btn-ghost" type="button" title="Change password"
+          onClick={() => setShowChpw(true)}>🔑</button>
         <button className="btn btn-ghost" type="button" onClick={logout}>Log out</button>
       </div>
     </header>
@@ -120,6 +129,7 @@ export default function App() {
       {page === 'awards' && <AwardsPage me={me} />}
       {page === 'students' && <TeacherStudents />}
       {page === 'assign' && <TeacherAssign toast={toast} />}
+      {page === 'admin' && isAdmin && <AdminPage toast={toast} />}
     </>)}
 
     <ToastList toasts={toasts} />

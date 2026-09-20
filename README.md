@@ -23,7 +23,14 @@ npm run dev:server
 npm run dev:client               # proxies /api → :3001
 ```
 
-Open **http://localhost:5173** and sign up as a student and/or teacher.
+Open **http://localhost:5173**. There is **no public signup** — accounts are
+created by an admin. Bootstrap the first admin (against the DB the server uses):
+
+```bash
+node server/scripts/create-admin.mjs [username] [password]   # password auto-generated if omitted
+```
+
+Then log in as that admin and create student/teacher accounts from the ⚙️ Admin page.
 
 ### Production mode
 
@@ -89,6 +96,7 @@ time tracking, and teacher/student authorization rules.
 - **My Progress dashboard** and **Awards** gallery
 
 ### 🍎 Teachers
+- See only the students in their **roster** (assigned by an admin)
 - Assign exercises: student, due date, any skills, questions per skill
 - Track every student: totals, per-topic breakdowns, and per-assignment
   status (⬜ not started / ⏳ in progress / ✅ done), updated live
@@ -121,7 +129,8 @@ legacy-static/            # original no-backend prototype (kept for reference)
 
 | Endpoint | Description |
 |---|---|
-| `POST /api/auth/signup` `/login` | JWT auth (roles: student, teacher) |
+| `POST /api/auth/login` | JWT auth (roles: student, teacher, admin) |
+| `POST /api/auth/password` | change own password (current + new) |
 | `GET /api/me` | profile, stats, skill progress, awards |
 | `POST /api/answers` | record an answer → SmartScore, medals, stars, homework progress, badges |
 | `POST /api/time` | accumulate practice time |
@@ -130,6 +139,11 @@ legacy-static/            # original no-backend prototype (kept for reference)
 | `POST/GET/DELETE /api/assignments` | (teacher) manage assignments |
 | `GET /api/meta/awards` | badge catalog for the awards page |
 | `GET /api/health` | health check (DB connectivity) for deploy platforms |
+| `GET /api/admin/users` | (admin) all accounts + teacher rosters |
+| `POST /api/admin/users` | (admin) create an account (password auto-generated if omitted) |
+| `POST /api/admin/users/:id/password` | (admin) reset a password |
+| `DELETE /api/admin/users/:id` | (admin) delete an account + its data |
+| `PUT /api/admin/teachers/:id/students` | (admin) replace a teacher's roster |
 
 ## Notes
 

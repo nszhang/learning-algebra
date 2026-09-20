@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import crypto from 'node:crypto';
 import * as db from './db.js';
 import { nextScore, medalFor } from './scoring.js';
 import { AWARDS, AWARD_META } from './awards.js';
@@ -37,6 +38,17 @@ export function createApp(pool, jwtSecret = 'dev-secret-change-me') {
   }
   const teacherOnly = (req, res, next) =>
     req.role === 'teacher' ? next() : res.status(403).json({ error: 'Teachers only' });
+  const adminOnly = (req, res, next) =>
+    req.role === 'admin' ? next() : res.status(403).json({ error: 'Admins only' });
+
+  // No-confusion alphabet for generated passwords (no 0/O, 1/l/I).
+  function genPassword(len = 10) {
+    const chars = 'abcdefghjkmnpqrstuvwxyz23456789';
+    const bytes = crypto.randomBytes(len);
+    let pw = '';
+    for (const b of bytes) pw += chars[b % chars.length];
+    return pw;
+  }
 
   // ---------- helpers ----------
   async function awardContext(userId, starsOverride) {
@@ -87,33 +99,27 @@ export function createApp(pool, jwtSecret = 'dev-secret-change-me') {
   }
 
   // ---------- auth routes ----------
-  app.post('/api/auth/signup', async (req, res) => {
-    const { username, displayName, password, role } = req.body || {};
-    const uname = String(username || '').trim().toLowerCase();
-    if (!USERNAME_RE.test(uname))
-      return res.status(400).json({ error: 'Username must be 3–20 chars: letters, numbers, underscores.' });
-    if (!password || String(password).length < 4)
-      return res.status(400).json({ error: 'Password must be at least 4 characters.' });
-    if (!['student', 'teacher'].includes(role))
-      return res.status(400).json({ error: 'Role must be student or teacher.' });
-    if (await db.findUserByUsername(pool, uname))
-      return res.status(409).json({ error: 'That username is taken — try another!' });
-
-    const passHash = await bcrypt.hash(String(password), 10);
-    const user = await db.createUser(pool, {
-      username: uname,
-      displayName: String(displayName || '').trim() || uname,
-      passHash, role
-    });
-    res.json({ token: sign(user), user: publicUser(user) });
-  });
-
+  // NOTE: no public signup — accounts are created by an admin via /api/admin/users.
   app.post('/api/auth/login', async (req, res) => {
     const { username, password } = req.body || {};
     const user = await db.findUserByUsername(pool, String(username || '').trim().toLowerCase());
     if (!user || !(await bcrypt.compare(String(password || ''), user.pass_hash)))
       return res.status(401).json({ error: 'Incorrect username or password.' });
     res.json({ token: sign(user), user: publicUser(user) });
+  });
+
+  // Change own password (any role).
+  app.post('/api/auth/password', auth, async (req, res) => {
+    const { currentPassword, newPassword } = req.body || {};
+    if (!newPassword || String(newPassword).length < 4)
+      return res.status(400).json({ error: 'New password must be at least 4 characters.' });
+    const { rows } = await pool.query('SELECT pass_hash FROM users WHERE id = $1', [req.uid]);
+    const user = rows[0];
+    if (!user) return res.status(401).json({ error: 'Account not found' });
+    if (!(await bcrypt.compare(String(currentPassword || ''), user.pass_hash)))
+      return res.status(403).json({ error: 'Current password is incorrect.' });
+    await db.updatePassHash(pool, req.uid, await bcrypt.hash(String(newPassword), 10));
+    res.json({ ok: true });
   });
 
   app.get('/api/meta/awards', (req, res) => res.json(AWARD_META));
@@ -241,8 +247,9 @@ export function createApp(pool, jwtSecret = 'dev-secret-change-me') {
   });
 
   // ---------- teacher ----------
+  // Only students in the teacher's roster (admin-managed via /api/admin/*).
   app.get('/api/students', auth, teacherOnly, async (req, res) => {
-    const students = await db.getStudentsWithStats(pool);
+    const students = await db.getStudentsWithStats(pool, req.uid);
     const result = [];
     for (const s of students) {
       const [progress, assignments, hwProgress, completed] = await Promise.all([
@@ -282,6 +289,8 @@ export function createApp(pool, jwtSecret = 'dev-secret-change-me') {
     const student = await pool.query(
       "SELECT id FROM users WHERE id = $1 AND role = 'student'", [studentId]).then(r => r.rows[0]);
     if (!student) return res.status(404).json({ error: 'Student not found' });
+    if (!(await db.isTeacherOf(pool, req.uid, student.id)))
+      return res.status(403).json({ error: 'That student is not in your roster.' });
 
     const id = 'a' + Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
     await db.createAssignment(pool, { id, teacherId: req.uid, studentId: student.id, due, items: clean });
@@ -308,6 +317,81 @@ export function createApp(pool, jwtSecret = 'dev-secret-change-me') {
   app.delete('/api/assignments/:id', auth, teacherOnly, async (req, res) => {
     const ok = await db.deleteAssignment(pool, req.params.id, req.uid);
     res.status(ok ? 200 : 404).json({ ok });
+  });
+
+  // ---------- admin ----------
+  app.get('/api/admin/users', auth, adminOnly, async (req, res) => {
+    const [users, rosters] = await Promise.all([db.getAllUsers(pool), db.getTeacherStudentPairs(pool)]);
+    res.json({
+      users: users.map(publicUser),
+      rosters: rosters.map(r => ({ teacherId: r.teacher_id, studentId: r.student_id }))
+    });
+  });
+
+  app.post('/api/admin/users', auth, adminOnly, async (req, res) => {
+    const { username, displayName, role, password } = req.body || {};
+    const uname = String(username || '').trim().toLowerCase();
+    if (!USERNAME_RE.test(uname))
+      return res.status(400).json({ error: 'Username must be 3–20 chars: letters, numbers, underscores.' });
+    if (!['student', 'teacher', 'admin'].includes(role))
+      return res.status(400).json({ error: 'Role must be student, teacher, or admin.' });
+    const pw = password ? String(password) : genPassword();
+    if (pw.length < 4)
+      return res.status(400).json({ error: 'Password must be at least 4 characters.' });
+    if (await db.findUserByUsername(pool, uname))
+      return res.status(409).json({ error: 'That username is taken — try another!' });
+
+    const user = await db.createUser(pool, {
+      username: uname,
+      displayName: String(displayName || '').trim() || uname,
+      passHash: await bcrypt.hash(pw, 10),
+      role
+    });
+    res.json({ user: publicUser(user), password: pw, generated: !password });
+  });
+
+  app.post('/api/admin/users/:id/password', auth, adminOnly, async (req, res) => {
+    const id = req.params.id | 0;
+    const target = await pool.query('SELECT id FROM users WHERE id = $1', [id]).then(r => r.rows[0]);
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    const given = req.body?.password ? String(req.body.password) : '';
+    const pw = given || genPassword();
+    if (pw.length < 4)
+      return res.status(400).json({ error: 'Password must be at least 4 characters.' });
+    await db.updatePassHash(pool, id, await bcrypt.hash(pw, 10));
+    res.json({ ok: true, password: pw, generated: !given });
+  });
+
+  app.delete('/api/admin/users/:id', auth, adminOnly, async (req, res) => {
+    const id = req.params.id | 0;
+    if (id === req.uid)
+      return res.status(400).json({ error: 'You cannot delete your own account.' });
+    const target = await pool.query('SELECT id, role FROM users WHERE id = $1', [id]).then(r => r.rows[0]);
+    if (!target) return res.status(404).json({ error: 'User not found' });
+    if (target.role === 'admin' && (await db.countByRole(pool, 'admin')) <= 1)
+      return res.status(400).json({ error: 'Cannot delete the last admin account.' });
+    const ok = await db.deleteUser(pool, id);
+    res.status(ok ? 200 : 404).json({ ok });
+  });
+
+  // Replace a teacher's whole roster: body { studentIds: [..] }
+  app.put('/api/admin/teachers/:id/students', auth, adminOnly, async (req, res) => {
+    const teacher = await pool.query(
+      "SELECT id FROM users WHERE id = $1 AND role = 'teacher'", [req.params.id | 0]).then(r => r.rows[0]);
+    if (!teacher) return res.status(404).json({ error: 'Teacher not found' });
+    const ids = [...new Set((Array.isArray(req.body?.studentIds) ? req.body.studentIds : [])
+      .map(n => n | 0).filter(n => n > 0))];
+    if (ids.length) {
+      // validate in JS (tiny users table) — portable across pg drivers
+      const { rows } = await pool.query("SELECT id FROM users WHERE role = 'student'");
+      const valid = new Set(rows.map(r => r.id));
+      if (ids.some(id => !valid.has(id)))
+        return res.status(400).json({ error: 'studentIds must contain only student accounts.' });
+      await db.setTeacherStudents(pool, teacher.id, ids);
+    } else {
+      await db.setTeacherStudents(pool, teacher.id, []);
+    }
+    res.json({ ok: true, count: ids.length });
   });
 
   return app;

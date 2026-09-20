@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS users (
   username     TEXT UNIQUE NOT NULL,
   display_name TEXT NOT NULL,
   pass_hash    TEXT NOT NULL,
-  role         TEXT NOT NULL DEFAULT 'student' CHECK (role IN ('student', 'teacher')),
+  role         TEXT NOT NULL DEFAULT 'student' CHECK (role IN ('student', 'teacher', 'admin')),
   stars        INT  NOT NULL DEFAULT 0,
   created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -63,6 +63,16 @@ CREATE TABLE IF NOT EXISTS homework_completed (
   PRIMARY KEY (user_id, assignment_id)
 );
 
+-- Roster: which students belong to which teacher (admin-managed).
+-- Teachers can only see / assign homework to students in their roster.
+CREATE TABLE IF NOT EXISTS teacher_students (
+  teacher_id INT  NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  student_id INT  NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (teacher_id, student_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_assignments_student ON assignments(student_id);
 CREATE INDEX IF NOT EXISTS idx_assignments_teacher ON assignments(teacher_id);
 CREATE INDEX IF NOT EXISTS idx_hw_progress_user ON homework_progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_teacher_students_student ON teacher_students(student_id);

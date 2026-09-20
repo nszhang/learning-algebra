@@ -1,11 +1,9 @@
 import { useState } from 'react';
 import { api } from '../api.js';
 
+// Login only — accounts (students and teachers) are created by an admin.
 export default function Auth({ onAuth }) {
-  const [mode, setMode] = useState('login');
-  const [role, setRole] = useState('student');
   const [username, setUsername] = useState('');
-  const [display, setDisplay] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -14,9 +12,7 @@ export default function Auth({ onAuth }) {
     e.preventDefault();
     setError(''); setBusy(true);
     try {
-      const data = mode === 'signup'
-        ? await api('POST', '/api/auth/signup', { username, displayName: display, password, role })
-        : await api('POST', '/api/auth/login', { username, password });
+      const data = await api('POST', '/api/auth/login', { username, password });
       onAuth(data);
     } catch (err) {
       setError(err.message);
@@ -35,42 +31,21 @@ export default function Auth({ onAuth }) {
           </div>
           <p className="tagline">Master algebra, one skill at a time. Earn medals, ribbons, and stars as your SmartScore climbs to 100!</p>
 
-          <div className="auth-tabs">
-            <button type="button" className={'auth-tab' + (mode === 'login' ? ' active' : '')}
-              onClick={() => { setMode('login'); setError(''); }}>Log in</button>
-            <button type="button" className={'auth-tab' + (mode === 'signup' ? ' active' : '')}
-              onClick={() => { setMode('signup'); setError(''); }}>Sign up</button>
-          </div>
-
           <form id="form-auth" onSubmit={submit} autoComplete="off">
             <label>Username
               <input type="text" maxLength="20" required placeholder="e.g. math_wizard"
                 value={username} onChange={e => setUsername(e.target.value)} />
             </label>
-            {mode === 'signup' && (<>
-              <label>Display name
-                <input type="text" maxLength="30" placeholder="e.g. Alex"
-                  value={display} onChange={e => setDisplay(e.target.value)} />
-              </label>
-              <div id="role-row">
-                <span className="role-label">I am a…</span>
-                <div className="role-tabs">
-                  <button type="button" className={'role-tab' + (role === 'student' ? ' active' : '')}
-                    onClick={() => setRole('student')}>🎒 Student</button>
-                  <button type="button" className={'role-tab' + (role === 'teacher' ? ' active' : '')}
-                    onClick={() => setRole('teacher')}>🍎 Teacher</button>
-                </div>
-              </div>
-            </>)}
             <label>Password
               <input type="password" maxLength="40" required placeholder="••••••"
                 value={password} onChange={e => setPassword(e.target.value)} />
             </label>
             <p className="auth-error">{error}</p>
             <button className="btn btn-primary btn-lg" style={{ width: '100%' }} type="submit" disabled={busy}>
-              {busy ? '…' : mode === 'login' ? 'Log in' : 'Create account'}
+              {busy ? '…' : 'Log in'}
             </button>
           </form>
+          <p className="auth-hint">Don't have an account? Ask your teacher or the site admin to create one for you.</p>
         </div>
 
         <div className="auth-side">
