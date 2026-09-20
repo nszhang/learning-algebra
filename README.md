@@ -138,3 +138,18 @@ legacy-static/            # original no-backend prototype (kept for reference)
   question sessions so answers are verified server-side.
 - The legacy static prototype (localStorage-based) is preserved in
   `legacy-static/` — open `legacy-static/index.html` to compare.
+
+## 🚀 Production deployment (math.pnpsolutions.ca/learning-algebra)
+
+Deployed on `webapp01.pnpsolutions.ca` (see `deploy.sh` header for the full
+layout: systemd `learning-algebra.service` on 127.0.0.1:3004, nginx subpath
+proxy in `math.pnpsolutions.ca.conf`, Postgres db/role `algebraace`, secrets in
+`/etc/learning-algebra.env`, daily file+DB backups with offsite sync).
+
+The client builds with `base: '/learning-algebra/'` (see `client/vite.config.js`)
+and `client/src/api.js` prefixes API calls with `import.meta.env.BASE_URL`, so
+the same code still runs from the repo root in dev (`npm run dev:*`).
+
+```bash
+./deploy.sh        # rsync → build on server → restart → health check
+```
