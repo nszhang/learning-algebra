@@ -34,7 +34,36 @@ npm start                        # Express serves API + built client on :3001
 
 Configuration via environment variables: `DATABASE_URL`
 (default `postgres://postgres:postgres@localhost:5432/algebraace`),
-`JWT_SECRET`, `PORT`.
+`JWT_SECRET`, `PORT`, and `PGSSL=true` if your Postgres requires SSL
+(also auto-detected from `sslmode=require` in `DATABASE_URL`).
+
+## 🐳 Docker
+
+The root `Dockerfile` builds the whole app into one image (multi-stage:
+React build → server deps → runtime). The server auto-applies the schema
+on startup.
+
+```bash
+# whole stack (Postgres + app) in one command → http://localhost:3001
+docker compose up --build app
+
+# or build/run the image against your own database
+docker build -t algebraace .
+docker run -p 3001:3001 \
+  -e DATABASE_URL=postgres://user:pass@host:5432/algebraace \
+  -e JWT_SECRET=some-long-random-secret \
+  algebraace
+```
+
+## ☁️ Deploying
+
+- **Render** (easiest): the repo includes `render.yaml` — in the Render
+  dashboard choose *New → Blueprint* and point it at this repo. It provisions
+  the Docker web service + a managed PostgreSQL, wires `DATABASE_URL`,
+  generates `JWT_SECRET`, and uses `/api/health` for health checks.
+- **Railway / Fly.io / any container host**: deploy the root `Dockerfile`,
+  attach a PostgreSQL database, and set `DATABASE_URL` + `JWT_SECRET`
+  (+ `PGSSL=true` if the provider requires SSL).
 
 ### Tests
 
@@ -100,6 +129,7 @@ legacy-static/            # original no-backend prototype (kept for reference)
 | `GET /api/students` | (teacher) all students with progress |
 | `POST/GET/DELETE /api/assignments` | (teacher) manage assignments |
 | `GET /api/meta/awards` | badge catalog for the awards page |
+| `GET /api/health` | health check (DB connectivity) for deploy platforms |
 
 ## Notes
 

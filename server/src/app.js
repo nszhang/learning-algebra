@@ -118,6 +118,16 @@ export function createApp(pool, jwtSecret = 'dev-secret-change-me') {
 
   app.get('/api/meta/awards', (req, res) => res.json(AWARD_META));
 
+  // health check for deploy platforms / load balancers
+  app.get('/api/health', async (req, res) => {
+    try {
+      await pool.query('SELECT 1');
+      res.json({ ok: true });
+    } catch {
+      res.status(503).json({ ok: false });
+    }
+  });
+
   // ---------- student data ----------
   app.get('/api/me', auth, async (req, res) => {
     const [userRow, stats, progress, awards] = await Promise.all([

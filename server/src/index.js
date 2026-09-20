@@ -13,7 +13,11 @@ const DATABASE_URL = process.env.DATABASE_URL
   || 'postgres://postgres:postgres@localhost:5432/algebraace';
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 
-const pool = new pg.Pool({ connectionString: DATABASE_URL });
+const useSSL = process.env.PGSSL === 'true' || /sslmode=require/i.test(DATABASE_URL);
+const pool = new pg.Pool({
+  connectionString: DATABASE_URL,
+  ssl: useSSL ? { rejectUnauthorized: false } : undefined
+});
 await initSchema(pool);
 console.log('✅ Connected to PostgreSQL and schema is ready');
 

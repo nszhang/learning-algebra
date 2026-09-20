@@ -15,5 +15,19 @@ services:
       timeout: 3s
       retries: 10
 
+  # Full-stack app (Express API + built React client) in one container.
+  # `docker compose up --build app` → http://localhost:3001
+  app:
+    build: .
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@db:5432/algebraace
+      JWT_SECRET: ${JWT_SECRET:-dev-secret-change-me}
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      db:
+        condition: service_healthy
+
 volumes:
   pgdata:
