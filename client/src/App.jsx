@@ -9,6 +9,7 @@ import TeacherStudents from './components/TeacherStudents.jsx';
 import TeacherAssign from './components/TeacherAssign.jsx';
 import AdminPage from './components/AdminPage.jsx';
 import ChangePassword from './components/ChangePassword.jsx';
+import LearnPage from './components/LearnPage.jsx';
 import PracticePage from './components/PracticePage.jsx';
 import Confetti from './components/Confetti.jsx';
 
@@ -77,10 +78,10 @@ export default function App() {
   const isTeacher = user.role === 'teacher';
   const isAdmin = user.role === 'admin';
   const nav = isAdmin
-    ? [['admin', '⚙️ Admin']]
+    ? [['admin', '⚙️ Admin'], ['learn', '🎓 Learn']]
     : isTeacher
-      ? [['students', '👥 Students'], ['assign', '📝 Assign']]
-      : [['home', '📚 Skills'], ['homework', '📝 Homework'], ['dashboard', '📊 My Progress'], ['awards', '🏆 Awards']];
+      ? [['students', '👥 Students'], ['assign', '📝 Assign'], ['learn', '🎓 Learn']]
+      : [['home', '📚 Skills'], ['homework', '📝 Homework'], ['learn', '🎓 Learn'], ['dashboard', '📊 My Progress'], ['awards', '🏆 Awards']];
 
   const startSkill = skillId => setPracticeCfg({ mode: 'skill', skillId });
   const startHomework = assignment => setPracticeCfg({ mode: 'homework', assignment });
@@ -125,6 +126,7 @@ export default function App() {
       {page === 'home' && <SkillsPage me={me} homework={homework}
         onStartSkill={startSkill} onStartHomework={startHomework} toast={toast} />}
       {page === 'homework' && <HomeworkPage homework={homework} onStart={startHomework} />}
+      {page === 'learn' && <LearnPage toast={toast} fireConfetti={fireConfetti} />}
       {page === 'dashboard' && <DashboardPage me={me} onStartSkill={startSkill} />}
       {page === 'awards' && <AwardsPage me={me} />}
       {page === 'students' && <TeacherStudents />}

@@ -437,6 +437,110 @@ body {
 }
 .assign-row .assign-del { margin-left: auto; }
 
+/* ---------- learn: step-by-step solver ---------- */
+.learn-grid {
+  display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start;
+}
+@media (max-width: 860px) { .learn-grid { grid-template-columns: 1fr; } }
+
+.lesson-board {
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 24px;
+}
+.lesson-controls {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.level-tabs { display: flex; background: var(--bg); border-radius: 10px; padding: 4px; }
+
+.eq-stage { padding: 30px 10px 10px; text-align: center; }
+.eq-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 18px; flex-wrap: wrap; min-height: 90px;
+}
+.eq-side {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  justify-content: center; min-width: 140px; position: relative;
+  padding-bottom: 26px;
+}
+.eq-equals { font-size: 2rem; font-weight: 800; color: var(--primary); }
+
+.term-chip {
+  display: inline-block; padding: 10px 16px; border-radius: 12px;
+  background: var(--primary-light); color: var(--primary);
+  font-size: 1.4rem; font-weight: 800;
+  font-family: "Cambria Math", Georgia, serif;
+  animation: chip-in .35s ease;
+  transition: opacity .5s, transform .5s;
+}
+.op-chip {
+  background: #fef3c7; color: #92400e;
+  box-shadow: 0 0 0 2px #fbbf24 inset;
+  animation: chip-in .35s ease;
+}
+.chip-fade { opacity: 0; transform: scale(.6) translateY(-14px); }
+@keyframes chip-in { from { transform: scale(.5); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.div-bar {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  border-top: 3px solid #f59e0b; color: #92400e;
+  font-weight: 800; padding-top: 4px; font-size: 1.05rem;
+  animation: chip-in .35s ease; transition: opacity .5s;
+}
+
+.balance { width: 260px; margin: 18px auto 4px; }
+.balance-beam { height: 5px; background: #94a3b8; border-radius: 3px; }
+.balance-fulcrum {
+  width: 0; height: 0; margin: 0 auto;
+  border-left: 16px solid transparent; border-right: 16px solid transparent;
+  border-bottom: 22px solid #94a3b8;
+}
+.balance-caption { color: var(--muted); font-size: .85rem; margin-top: 6px; }
+
+.lesson-done { margin-top: 16px; text-align: left; }
+
+.lesson-steps {
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow); padding: 20px;
+  position: sticky; top: 84px;
+}
+.lesson-steps h4 { margin-bottom: 12px; }
+.lesson-step {
+  display: flex; gap: 12px; padding: 10px; border-radius: 10px;
+  margin-bottom: 6px; color: var(--muted);
+}
+.lesson-step.step-current { background: var(--primary-light); color: var(--ink); }
+.lesson-step.step-done { color: var(--green); }
+.step-num {
+  width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
+  background: var(--bg); display: grid; place-items: center;
+  font-weight: 800; font-size: .85rem;
+}
+.step-current .step-num { background: var(--primary); color: #fff; }
+.step-done .step-num { background: var(--green-light); }
+.step-text { font-weight: 600; font-size: .95rem; }
+.step-why { font-size: .82rem; margin-top: 3px; line-height: 1.4; }
+
+/* ---------- learn: graph playground ---------- */
+.graph-wrap { position: relative; text-align: center; }
+.graph-svg {
+  max-width: 100%; height: auto;
+  background: #fff; border: 2px solid var(--line); border-radius: 12px;
+}
+.graph-eq {
+  font-family: "Cambria Math", Georgia, serif;
+  font-size: 1.5rem; font-weight: 800; color: var(--primary);
+  margin-top: 12px;
+}
+.match-status { margin-top: 8px; font-weight: 700; color: #7e22ce; }
+.match-status.won { color: var(--green); }
+
+.slider-row { display: block; margin-bottom: 18px; font-size: .95rem; }
+.slider-row span { display: block; margin-bottom: 6px; }
+.slider-val { color: var(--primary); }
+.slider-row input[type="range"] { width: 100%; accent-color: var(--primary); }
+.graph-facts p { font-size: .88rem; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
+
 /* ---------- shared vertical forms (admin, modals) ---------- */
 .form-vertical label { display: block; font-weight: 600; font-size: .9rem; margin-bottom: 14px; }
 .form-vertical input, .form-vertical select {

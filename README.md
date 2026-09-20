@@ -85,6 +85,11 @@ time tracking, and teacher/student authorization rules.
 ## Features
 
 ### 🎒 Students
+- **🎓 Learn section** — animated step-by-step equation solver (watch each
+  operation apply to both sides of the balance, terms cancelling in real time;
+  3 difficulty levels with Play/Step controls) plus an **interactive graph
+  playground**: drag sliders for m and b, watch `y = mx + b` move with slope
+  triangle and y-intercept, and play 🎯 *Match the line*
 - **15 skills across 8 algebra topics** — expressions, equations, inequalities,
   slope & linear functions, exponents, systems, quadratics, word problems —
   with infinitely generated questions and step-by-step explanations
