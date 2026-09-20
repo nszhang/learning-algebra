@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>AlgebraAce — Master Algebra, One Skill at a Time</title>
+<link rel="stylesheet" href="css/styles.css" />
+</head>
+<body>
+
+<canvas id="confetti-canvas"></canvas>
+
+<!-- ============ AUTH SCREEN ============ -->
+<div id="screen-auth" class="screen active">
+  <div class="auth-hero">
+    <div class="auth-card">
+      <div class="brand">
+        <span class="brand-logo">∑</span>
+        <h1>Algebra<span class="brand-accent">Ace</span></h1>
+      </div>
+      <p class="tagline">Master algebra, one skill at a time. Earn medals, ribbons, and stars as your SmartScore climbs to 100!</p>
+
+      <div class="auth-tabs">
+        <button id="tab-login" class="auth-tab active" type="button">Log in</button>
+        <button id="tab-signup" class="auth-tab" type="button">Sign up</button>
+      </div>
+
+      <form id="form-auth" autocomplete="off">
+        <label>Username
+          <input id="auth-username" type="text" maxlength="20" required placeholder="e.g. math_wizard" />
+        </label>
+        <label id="display-name-row" class="hidden">Display name
+          <input id="auth-display" type="text" maxlength="30" placeholder="e.g. Alex" />
+        </label>
+        <div id="role-row" class="hidden">
+          <span class="role-label">I am a…</span>
+          <div class="role-tabs">
+            <button id="role-student" class="role-tab active" type="button">🎒 Student</button>
+            <button id="role-teacher" class="role-tab" type="button">🍎 Teacher</button>
+          </div>
+        </div>
+        <label>Password
+          <input id="auth-password" type="password" maxlength="40" required placeholder="••••••" />
+        </label>
+        <p id="auth-error" class="auth-error"></p>
+        <button id="auth-submit" class="btn btn-primary btn-lg" type="submit">Log in</button>
+      </form>
+    </div>
+
+    <div class="auth-side">
+      <h2>Why students love AlgebraAce</h2>
+      <ul class="feature-list">
+        <li>🏅 <strong>SmartScore 0–100</strong> — watch your score climb as you learn</li>
+        <li>🎉 <strong>Awards &amp; prizes</strong> — medals, badges, and stars for every milestone</li>
+        <li>📊 <strong>Progress tracking</strong> — your growth, saved to your account</li>
+        <li>💡 <strong>Step-by-step explanations</strong> — learn from every mistake</li>
+        <li>🔥 <strong>Challenge Zone</strong> — prove mastery above 90!</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ============ APP SHELL ============ -->
+<div id="app-shell" class="hidden">
+  <header class="topbar">
+    <div class="brand brand-sm">
+      <span class="brand-logo">∑</span>
+      <span class="brand-name">Algebra<span class="brand-accent">Ace</span></span>
+    </div>
+    <nav class="main-nav">
+      <button class="nav-btn active" data-nav="home" id="nav-skills" type="button">📚 Skills</button>
+      <button class="nav-btn" data-nav="homework" id="nav-homework" type="button">📝 Homework</button>
+      <button class="nav-btn" data-nav="dashboard" id="nav-dashboard" type="button">📊 My Progress</button>
+      <button class="nav-btn" data-nav="awards" id="nav-awards" type="button">🏆 Awards</button>
+      <button class="nav-btn hidden" data-nav="students" id="nav-students" type="button">👥 Students</button>
+      <button class="nav-btn hidden" data-nav="assign" id="nav-assign" type="button">📝 Assign</button>
+    </nav>
+    <div class="user-chip">
+      <span id="user-stars" class="stars-chip">⭐ 0</span>
+      <span id="user-greeting" class="greeting">Hi!</span>
+      <button id="btn-logout" class="btn btn-ghost" type="button">Log out</button>
+    </div>
+  </header>
+
+  <!-- ============ SKILLS HOME ============ -->
+  <main id="screen-home" class="screen page">
+    <div class="page-head">
+      <h2>Algebra Skills</h2>
+      <p class="muted">Pick a skill and practice until your SmartScore hits <strong>100</strong>! Medals: 🥉 70 &nbsp; 🥈 90 &nbsp; 🥇 100</p>
+    </div>
+    <div id="skills-container"></div>
+  </main>
+
+  <!-- ============ DASHBOARD ============ -->
+  <main id="screen-dashboard" class="screen page">
+    <div class="page-head">
+      <h2>My Progress</h2>
+      <p class="muted" id="dashboard-subtitle"></p>
+    </div>
+    <div id="stat-cards" class="stat-cards"></div>
+    <h3 class="section-title">Skill breakdown</h3>
+    <div id="dashboard-skills"></div>
+  </main>
+
+  <!-- ============ AWARDS ============ -->
+  <main id="screen-awards" class="screen page">
+    <div class="page-head">
+      <h2>My Awards</h2>
+      <p class="muted">Earn badges by practicing, building streaks, and mastering skills.</p>
+    </div>
+    <div id="awards-grid" class="awards-grid"></div>
+  </main>
+
+  <!-- ============ HOMEWORK (student) ============ -->
+  <main id="screen-homework" class="screen page">
+    <div class="page-head">
+      <h2>📝 Homework</h2>
+      <p class="muted">A fresh set of exercises awaits you every day — plus anything your teacher assigns. Finish them all to earn ⭐!</p>
+    </div>
+    <h3 class="section-title">Due today</h3>
+    <div id="homework-today"></div>
+    <h3 class="section-title">Coming up this week</h3>
+    <div id="homework-week"></div>
+  </main>
+
+  <!-- ============ STUDENTS (teacher) ============ -->
+  <main id="screen-students" class="screen page">
+    <div class="page-head">
+      <h2>👥 Student Progress</h2>
+      <p class="muted">Click a student to see their topic breakdown and homework status.</p>
+    </div>
+    <div id="teacher-students"></div>
+  </main>
+
+  <!-- ============ ASSIGN (teacher) ============ -->
+  <main id="screen-assign" class="screen page">
+    <div class="page-head">
+      <h2>📝 Assign Exercises</h2>
+      <p class="muted">Choose a student, a due date, and the skills to practice.</p>
+    </div>
+    <form id="form-assign" class="assign-card">
+      <div class="assign-grid">
+        <label>Student <select id="assign-student"></select></label>
+        <label>Due date <input id="assign-date" type="date" required /></label>
+        <label>Questions per skill <input id="assign-count" type="number" min="1" max="20" value="5" /></label>
+      </div>
+      <div id="assign-skills"></div>
+      <button class="btn btn-primary btn-lg" type="submit">Assign homework</button>
+    </form>
+    <h3 class="section-title">Assignments</h3>
+    <div id="assign-list"></div>
+  </main>
+
+  <!-- ============ PRACTICE ============ -->
+  <main id="screen-practice" class="screen page">
+    <div class="practice-head">
+      <button id="btn-exit-practice" class="btn btn-ghost" type="button">← Back to skills</button>
+      <div class="practice-title">
+        <span id="practice-code" class="skill-code"></span>
+        <h2 id="practice-title"></h2>
+      </div>
+      <div id="practice-banner" class="practice-banner hidden"></div>
+    </div>
+
+    <div class="practice-layout">
+      <section class="question-panel">
+        <div id="question-prompt" class="question-prompt"></div>
+
+        <div id="answer-area"></div>
+
+        <div class="practice-actions">
+          <button id="btn-submit" class="btn btn-primary btn-lg" type="button">Submit</button>
+        </div>
+
+        <div id="feedback" class="feedback hidden"></div>
+      </section>
+
+      <aside class="score-panel">
+        <div class="score-card">
+          <div class="score-label">SmartScore</div>
+          <div id="score-value" class="score-value">0</div>
+          <div class="score-bar">
+            <div class="score-bar-zone zone-challenge"></div>
+            <div id="score-bar-fill" class="score-bar-fill"></div>
+          </div>
+          <div class="score-bar-labels"><span>0</span><span class="cz-label">Challenge Zone 90+</span><span>100</span></div>
+          <div id="score-medal" class="score-medal"></div>
+        </div>
+
+        <div class="session-card">
+          <div class="session-row"><span>🔥 Streak</span><strong id="session-streak">0</strong></div>
+          <div class="session-row"><span>✅ Correct</span><strong id="session-correct">0/0</strong></div>
+          <div class="session-row"><span>⏱️ Time</span><strong id="session-time">0:00</strong></div>
+        </div>
+
+        <div id="session-rewards" class="session-rewards"></div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<!-- Toast for awards -->
+<div id="toast-container"></div>
+
+<script src="js/skills.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
