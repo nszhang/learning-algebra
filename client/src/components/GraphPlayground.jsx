@@ -70,7 +70,8 @@ export default function GraphPlayground({ toast, fireConfetti }) {
 
   const range = BASE_RANGE / zoom;
   const scale = SIZE / (range * 2);
-  const step = niceStep(range * 2);
+  // grid square granularity clamped to a readable 0.1–100 units
+  const step = Math.min(100, Math.max(0.1, niceStep(range * 2)));
   const toX = x => (x + range) * scale;
   const toY = y => (range - y) * scale;
 
@@ -204,7 +205,7 @@ export default function GraphPlayground({ toast, fireConfetti }) {
         <h4>🎛️ Controls</h4>
         <label className="slider-row">
           <span><strong>m</strong> (slope) = <strong className="slider-val">{fmtNum(m)}</strong></span>
-          <Stepper value={m} set={setM} step={0.5} min={-5} max={5} />
+          <Stepper value={m} set={setM} step={0.5} min={-50} max={50} />
         </label>
         <div className="preset-row">
           {[-2, -1, 0, 1, 2].map(v => (
@@ -215,7 +216,7 @@ export default function GraphPlayground({ toast, fireConfetti }) {
         </div>
         <label className="slider-row">
           <span><strong>b</strong> (y-intercept) = <strong className="slider-val">{fmtNum(b)}</strong></span>
-          <Stepper value={b} set={setB} step={1} min={-10} max={10} />
+          <Stepper value={b} set={setB} step={1} min={-50} max={50} />
         </label>
         <div className="graph-facts">
           <p>📈 <strong>Slope m</strong> = rise ÷ run. Watch the orange triangle: for every 1 step right, the line rises by m.</p>
