@@ -552,6 +552,14 @@ body {
 .preset-btn.active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
 .anim-controls { display: flex; gap: 8px; flex-wrap: wrap; }
 .anim-progress { font-size: .9rem; align-self: center; }
+
+.graph-svg { touch-action: none; cursor: crosshair; }
+.zoom-bar {
+  display: flex; align-items: center; justify-content: center;
+  gap: 8px; margin-top: 10px; flex-wrap: wrap;
+}
+.zoom-label { font-weight: 800; color: var(--primary); min-width: 74px; text-align: center; }
+.zoom-hint { font-size: .8rem; }
 .graph-facts p { font-size: .88rem; color: var(--muted); line-height: 1.5; margin-bottom: 10px; }
 
 /* ---------- shared vertical forms (admin, modals) ---------- */
