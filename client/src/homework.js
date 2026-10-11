@@ -20,7 +20,7 @@ export function dailyAssignment(dateString) {
     const s = ALL_SKILLS[(seed + i * 5) % ALL_SKILLS.length];
     if (!items.find(x => x.skillId === s.id)) items.push({ skillId: s.id, count: 5 });
   }
-  return { id: 'daily-' + dateString, daily: true, due: dateString, items };
+  return { id: 'alg-daily-' + dateString, daily: true, due: dateString, items };
 }
 
 // Merge server-provided daily progress into a daily assignment object.

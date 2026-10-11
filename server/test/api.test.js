@@ -117,7 +117,7 @@ test('teacher sees only rostered students; assignments enforced', async () => {
   const today = new Date().toLocaleDateString('en-CA');
   const stuId = student.user.id;
   r = await api('POST', '/api/assignments', { token: teacher.token,
-    body: { studentId: stuId, due: today, items: [{ skillId: 'A1', count: 3 }] } });
+    body: { studentId: stuId, due: today, items: [{ skillId: 'algA1', count: 3 }] } });
   assert.equal(r.status, 403, 'cannot assign homework outside roster');
 
   // admin sets the roster: teacher -> stu1 only
@@ -138,7 +138,7 @@ test('teacher sees only rostered students; assignments enforced', async () => {
 
 test('answering questions updates SmartScore, stats, and awards', async () => {
   let r = await api('POST', '/api/answers',
-    { token: student.token, body: { skillId: 'B1', correct: true, streak: 1 } });
+    { token: student.token, body: { skillId: 'algB1', correct: true, streak: 1 } });
   assert.equal(r.status, 200);
   assert.ok(r.data.score > 0 && r.data.score <= 100, `score in range, got ${r.data.score}`);
   assert.ok(r.data.newAwards.some(a => a.id === 'first'), 'First Steps badge earned');
@@ -146,10 +146,10 @@ test('answering questions updates SmartScore, stats, and awards', async () => {
 
   for (let i = 0; i < 12; i++) {
     r = await api('POST', '/api/answers',
-      { token: student.token, body: { skillId: 'B1', correct: true, streak: i + 2 } });
+      { token: student.token, body: { skillId: 'algB1', correct: true, streak: i + 2 } });
   }
   const me = await api('GET', '/api/me', { token: student.token });
-  const b1 = me.data.skillProgress.find(p => p.skill_id === 'B1');
+  const b1 = me.data.skillProgress.find(p => p.skill_id === 'algB1');
   assert.ok(b1.score >= 70, `B1 should be bronze+, got ${b1.score}`);
   assert.ok(b1.medals.includes('bronze'), 'bronze medal stored');
   assert.equal(me.data.stats.answered, 13);
@@ -163,7 +163,7 @@ test('answering questions updates SmartScore, stats, and awards', async () => {
 test('score never goes below 0 on wrong answers', async () => {
   for (let i = 0; i < 5; i++) {
     const r = await api('POST', '/api/answers',
-      { token: student.token, body: { skillId: 'D1', correct: false, streak: 0 } });
+      { token: student.token, body: { skillId: 'algD1', correct: false, streak: 0 } });
     assert.ok(r.data.score >= 0);
   }
 });
@@ -176,7 +176,7 @@ test('teacher assigns homework; student completes at exactly N questions', async
   const today = new Date().toLocaleDateString('en-CA'); // YYYY-MM-DD
   let r = await api('POST', '/api/assignments', {
     token: teacher.token,
-    body: { studentId: stu.id, due: today, items: [{ skillId: 'A1', count: 10 }] }
+    body: { studentId: stu.id, due: today, items: [{ skillId: 'algA1', count: 10 }] }
   });
   assert.equal(r.status, 200);
   const assignmentId = r.data.id;
@@ -191,7 +191,7 @@ test('teacher assigns homework; student completes at exactly N questions', async
   for (let i = 1; i <= 12; i++) {
     r = await api('POST', '/api/answers', {
       token: student.token,
-      body: { skillId: 'A1', correct: !(i === 3 || i === 7), streak: 1, assignmentId }
+      body: { skillId: 'algA1', correct: !(i === 3 || i === 7), streak: 1, assignmentId }
     });
     if (r.data.homework?.justCompleted) justCompletedAt = i;
   }
@@ -212,11 +212,11 @@ test('teacher assigns homework; student completes at exactly N questions', async
 
 test('daily homework: client-computed items tracked server-side', async () => {
   const today = new Date().toLocaleDateString('en-CA');
-  const id = `daily-${today}`;
-  const items = [{ skillId: 'C1', count: 2 }];
+  const id = `alg-daily-${today}`;
+  const items = [{ skillId: 'algC1', count: 2 }];
   for (let i = 0; i < 2; i++) {
     const r = await api('POST', '/api/answers', {
-      token: student.token, body: { skillId: 'C1', correct: true, streak: 2, assignmentId: id, items }
+      token: student.token, body: { skillId: 'algC1', correct: true, streak: 2, assignmentId: id, items }
     });
     if (i === 1) assert.equal(r.data.homework.justCompleted, true, 'daily completes at count');
   }
@@ -246,7 +246,7 @@ test('teacher can delete own assignment only', async () => {
   const stu = students.data.find(s => s.username === 'stu1');
   const r = await api('POST', '/api/assignments', {
     token: teacher.token,
-    body: { studentId: stu.id, due: '2030-01-01', items: [{ skillId: 'G1', count: 3 }] }
+    body: { studentId: stu.id, due: '2030-01-01', items: [{ skillId: 'algG1', count: 3 }] }
   });
   const id = r.data.id;
   const del = await api('DELETE', `/api/assignments/${id}`, { token: student.token });

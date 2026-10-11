@@ -8,7 +8,7 @@ import * as db from './db.js';
 import { nextScore, medalFor } from './scoring.js';
 import { AWARDS, AWARD_META } from './awards.js';
 
-const SKILL_IDS = ['A1','A2','B1','B2','C1','C2','D1','D2','E1','E2','E3','F1','F2','F3','G1','H1','I1'];
+const SKILL_IDS = ['algA1', 'algA2', 'algB1', 'algB2', 'algC1', 'algC2', 'algD1', 'algD2', 'algE1', 'algE2', 'algE3', 'algF1', 'algF2', 'algF3', 'algG1', 'algH1', 'algI1'];
 const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
 
 export function createApp(pool, jwtSecret = 'dev-secret-change-me') {
@@ -176,7 +176,7 @@ export function createApp(pool, jwtSecret = 'dev-secret-change-me') {
     let homework = null;
     if (assignmentId) {
       let hwItems = null;
-      if (assignmentId.startsWith('daily-')) {
+      if (assignmentId.startsWith('alg-daily-')) {
         // daily sets are deterministic and client-computed
         hwItems = Array.isArray(items) ? items.filter(i =>
           SKILL_IDS.includes(i.skillId) && Number.isInteger(i.count) && i.count > 0 && i.count <= 50) : null;
@@ -233,15 +233,16 @@ export function createApp(pool, jwtSecret = 'dev-secret-change-me') {
       db.getCompletedHomework(pool, req.uid)
     ]);
     const completedSet = new Set(completed.map(c => c.assignment_id));
+    const ours = a => a.items.every(i => SKILL_IDS.includes(i.skillId));
     res.json({
-      assignments: assignments.map(a => ({
+      assignments: assignments.filter(ours).map(a => ({
         id: a.id, due: a.due, items: a.items, teacherName: a.teacher_name,
         progress: itemProgress(a.items, progress.filter(r => r.assignment_id === a.id)),
         ...hwTotals(a.items, progress.filter(r => r.assignment_id === a.id)),
         completed: completedSet.has(a.id)
       })),
-      dailyProgress: progress.filter(r => r.assignment_id.startsWith('daily-')),
-      dailyCompleted: completed.filter(c => c.assignment_id.startsWith('daily-'))
+      dailyProgress: progress.filter(r => r.assignment_id.startsWith('alg-daily-')),
+      dailyCompleted: completed.filter(c => c.assignment_id.startsWith('alg-daily-'))
         .map(c => c.assignment_id)
     });
   });
@@ -266,7 +267,7 @@ export function createApp(pool, jwtSecret = 'dev-secret-change-me') {
           best_streak: s.best_streak || 0, homework_done: s.homework_done || 0
         },
         skillProgress: progress,
-        assignments: assignments.map(a => ({
+        assignments: assignments.filter(a => a.items.every(i => SKILL_IDS.includes(i.skillId))).map(a => ({
           id: a.id, due: a.due, items: a.items,
           progress: itemProgress(a.items, hwProgress.filter(r => r.assignment_id === a.id)),
           ...hwTotals(a.items, hwProgress.filter(r => r.assignment_id === a.id)),
@@ -301,6 +302,7 @@ export function createApp(pool, jwtSecret = 'dev-secret-change-me') {
     const rows = await db.getAssignmentsByTeacher(pool, req.uid);
     const result = [];
     for (const a of rows) {
+      if (!a.items.every(i => SKILL_IDS.includes(i.skillId))) continue;
       const progress = await db.getHomeworkProgress(pool, a.student_id);
       const completed = await db.getCompletedHomework(pool, a.student_id);
       result.push({

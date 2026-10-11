@@ -45,7 +45,7 @@ export const TOPICS = [
     id: 'expr', icon: '🧮', name: 'Expressions',
     skills: [
       {
-        id: 'A1', code: 'A.1', title: 'Evaluate linear expressions',
+        id: 'algA1', code: 'A.1', title: 'Evaluate linear expressions',
         gen() {
           const a = ri(2, 9), b = rnz(-9, 9), v = rnz(-5, 5);
           const ans = a * v + b;
@@ -61,7 +61,7 @@ export const TOPICS = [
         }
       },
       {
-        id: 'A2', code: 'A.2', title: 'Combine like terms',
+        id: 'algA2', code: 'A.2', title: 'Combine like terms',
         gen() {
           const c1 = rnz(-9, 9), c2 = rnz(-9, 9), c3 = rnz(-9, 9);
           const k = c1 + c2 + c3;
@@ -85,7 +85,7 @@ export const TOPICS = [
     id: 'onestep', icon: '➕', name: 'One-step equations',
     skills: [
       {
-        id: 'B1', code: 'B.1', title: 'Solve one-step equations: addition & subtraction',
+        id: 'algB1', code: 'B.1', title: 'Solve one-step equations: addition & subtraction',
         gen() {
           const a = rnz(-12, 12), s = ri(-10, 10);
           const b = s + a;
@@ -100,7 +100,7 @@ export const TOPICS = [
         }
       },
       {
-        id: 'B2', code: 'B.2', title: 'Solve one-step equations: multiplication & division',
+        id: 'algB2', code: 'B.2', title: 'Solve one-step equations: multiplication & division',
         gen() {
           const a = ri(2, 12), s = ri(-9, 9);
           const b = a * s;
@@ -120,7 +120,7 @@ export const TOPICS = [
     id: 'multistep', icon: '🔀', name: 'Two-step & multi-step equations',
     skills: [
       {
-        id: 'C1', code: 'C.1', title: 'Solve two-step equations',
+        id: 'algC1', code: 'C.1', title: 'Solve two-step equations',
         gen() {
           const a = ri(2, 9), b = rnz(-9, 9), s = ri(-8, 8);
           const c = a * s + b;
@@ -134,7 +134,7 @@ export const TOPICS = [
         }
       },
       {
-        id: 'C2', code: 'C.2', title: 'Solve equations with variables on both sides',
+        id: 'algC2', code: 'C.2', title: 'Solve equations with variables on both sides',
         gen() {
           let a = ri(2, 7), c = ri(2, 7);
           while (c === a) c = ri(2, 7);
@@ -157,7 +157,7 @@ export const TOPICS = [
     id: 'ineq', icon: '⚖️', name: 'Inequalities',
     skills: [
       {
-        id: 'D1', code: 'D.1', title: 'Solve one-step inequalities',
+        id: 'algD1', code: 'D.1', title: 'Solve one-step inequalities',
         gen() {
           const a = rnz(-12, 12), s = ri(-10, 10);
           const b = s + a;
@@ -178,7 +178,7 @@ export const TOPICS = [
         }
       },
       {
-        id: 'D2', code: 'D.2', title: 'Solve two-step inequalities',
+        id: 'algD2', code: 'D.2', title: 'Solve two-step inequalities',
         gen() {
           let a = rnz(-9, 9); if (a === 1) a = 2;
           const b = rnz(-9, 9), s = ri(-7, 7);
@@ -209,7 +209,7 @@ export const TOPICS = [
     id: 'lines', icon: '📈', name: 'Slope & linear functions',
     skills: [
       {
-        id: 'E1', code: 'E.1', title: 'Find the slope from two points',
+        id: 'algE1', code: 'E.1', title: 'Find the slope from two points',
         gen() {
           const slope = rnz(-5, 5);
           const dx = pick([1, 2]);
@@ -226,7 +226,7 @@ export const TOPICS = [
         }
       },
       {
-        id: 'E2', code: 'E.2', title: 'Evaluate a linear function',
+        id: 'algE2', code: 'E.2', title: 'Evaluate a linear function',
         gen() {
           const slope = rnz(-6, 6), b = rnz(-9, 9), v = rnz(-6, 6);
           const ans = slope * v + b;
@@ -240,7 +240,7 @@ export const TOPICS = [
         }
       },
       {
-        id: 'E3', code: 'E.3', title: 'Find the y-intercept from a point and slope',
+        id: 'algE3', code: 'E.3', title: 'Find the y-intercept from a point and slope',
         gen() {
           const slope = rnz(-5, 5), x1 = rnz(-6, 6), y1 = ri(-8, 8);
           const b = y1 - slope * x1;
@@ -262,7 +262,7 @@ export const TOPICS = [
     id: 'expo', icon: '💪', name: 'Exponents',
     skills: [
       {
-        id: 'F1', code: 'F.1', title: 'Product rule of exponents',
+        id: 'algF1', code: 'F.1', title: 'Product rule of exponents',
         gen() {
           const a = ri(2, 9), b = ri(2, 9);
           return {
@@ -275,7 +275,7 @@ export const TOPICS = [
         }
       },
       {
-        id: 'F2', code: 'F.2', title: 'Power of a power',
+        id: 'algF2', code: 'F.2', title: 'Power of a power',
         gen() {
           const a = ri(2, 6), b = ri(2, 5);
           return {
@@ -288,7 +288,7 @@ export const TOPICS = [
         }
       },
       {
-        id: 'F3', code: 'F.3', title: 'Negative exponents',
+        id: 'algF3', code: 'F.3', title: 'Negative exponents',
         gen() {
           const base = ri(2, 4), e = ri(1, 3);
           const val = Math.pow(base, e);
@@ -310,7 +310,7 @@ export const TOPICS = [
     id: 'systems', icon: '🤝', name: 'Systems of equations',
     skills: [
       {
-        id: 'G1', code: 'G.1', title: 'Solve a system of two equations',
+        id: 'algG1', code: 'G.1', title: 'Solve a system of two equations',
         gen() {
           const x = ri(-6, 6), y = ri(-6, 6);
           const s = x + y, d = x - y;
@@ -332,7 +332,7 @@ export const TOPICS = [
     id: 'quad', icon: '🎯', name: 'Quadratic equations',
     skills: [
       {
-        id: 'H1', code: 'H.1', title: 'Solve x² + bx + c = 0 by factoring',
+        id: 'algH1', code: 'H.1', title: 'Solve x² + bx + c = 0 by factoring',
         gen() {
           let p = ri(-8, 8), q = ri(-8, 8);
           while (q === p) q = ri(-8, 8);
@@ -358,7 +358,7 @@ export const TOPICS = [
     id: 'word', icon: '🌍', name: 'Word problems',
     skills: [
       {
-        id: 'I1', code: 'I.1', title: 'Linear equation word problems',
+        id: 'algI1', code: 'I.1', title: 'Linear equation word problems',
         gen() {
           const t = ri(1, 3);
           if (t === 1) {
