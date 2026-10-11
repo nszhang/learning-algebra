@@ -15,8 +15,44 @@ export const LEVELS = [
   { id: 3, name: 'Both sides', example: '5x + 2 = 2x + 14' }
 ];
 
-// Generate ax + b = cx + d with integer solution s, plus the step list.
-export function generateEquation(level) {
+// one-step equation families
+export const ONE_STEP_KINDS = [
+  { id: 'addsub', label: '➕ x + b = d' },
+  { id: 'mul',    label: '✖️ ax = d' },
+  { id: 'div',    label: '➗ x/a = d' }
+];
+
+// Generate an equation with integer solution s, plus the step list.
+export function generateEquation(level, kind = 'addsub') {
+  // ---- one-step families ----
+  if (level === 1 && kind === 'mul') {
+    const a = ri(2, 12), s = ri(-9, 9), d = a * s;
+    return {
+      a, b: 0, c: 0, d, solution: s,
+      left: [varTerm(a)], right: [constTerm(d)],
+      steps: [{
+        text: `Divide both sides by ${a}`,
+        why: 'x is multiplied by a number — undo it with division.',
+        op: { kind: 'div', by: a }
+      }],
+      check: `Check: ${a}(${fmtNum(s)}) = ${d} ✓`
+    };
+  }
+  if (level === 1 && kind === 'div') {
+    const n = ri(2, 9), d = rnz(-9, 9), s = d * n;
+    return {
+      a: 1 / n, b: 0, c: 0, d, solution: s,
+      left: [varTerm(1 / n)], right: [constTerm(d)],
+      steps: [{
+        text: `Multiply both sides by ${n}`,
+        why: 'x is divided by a number — undo it with multiplication.',
+        op: { kind: 'mul', by: n }
+      }],
+      check: `Check: ${fmtNum(s)}/${n} = ${d} ✓`
+    };
+  }
+
+  // ---- add/subtract one-step, two-step, both-sides ----
   let a, c;
   if (level === 1) { a = 1; c = 0; }
   else if (level === 2) { a = ri(2, 9); c = 0; }
@@ -36,7 +72,7 @@ export function generateEquation(level) {
     why: 'Get the constants together on the other side.',
     op: { kind: 'term', coef: 0, val: -b }
   });
-  steps.push({
+  if (a - c !== 1) steps.push({
     text: `Divide both sides by ${a - c}`,
     why: 'Isolate x — whatever you do to one side, you must do to the other!',
     op: { kind: 'div', by: a - c }
@@ -63,11 +99,12 @@ function combine(terms) {
 
 // Apply one step's operation to both sides → [newLeft, newRight]
 export function applyOp(left, right, op) {
-  if (op.kind === 'div') {
-    const div = t => t.type === 'var'
-      ? { ...t, coef: t.coef / op.by }
-      : { ...t, val: t.val / op.by };
-    return [combine(left.map(div)), combine(right.map(div))];
+  if (op.kind === 'div' || op.kind === 'mul') {
+    const f = op.kind === 'div' ? op.by : 1 / op.by;
+    const scaleT = t => t.type === 'var'
+      ? { ...t, coef: t.coef / f }
+      : { ...t, val: t.val / f };
+    return [combine(left.map(scaleT)), combine(right.map(scaleT))];
   }
   const add = side => combine([
     ...side,
@@ -91,7 +128,15 @@ export function cancelledIds(side, op) {
 // ---------- formatting ----------
 const MINUS = '−';
 export const fmtNum = n => String(n).replace('-', MINUS);
-export const fmtCoef = c => c === 1 ? 'x' : c === -1 ? MINUS + 'x' : fmtNum(c) + 'x';
+export const fmtCoef = c => {
+  if (c === 1) return 'x';
+  if (c === -1) return MINUS + 'x';
+  if (Number.isInteger(c)) return fmtNum(c) + 'x';
+  // unit fraction ±(1/n)·x → x/n or −x/n
+  const inv = Math.round(1 / Math.abs(c));
+  if (Math.abs(Math.abs(c) * inv - 1) < 1e-9) return `${c < 0 ? MINUS : ''}x/${inv}`;
+  return fmtNum(Number(c.toFixed(4))) + 'x';
+};
 export const fmtSigned = n => (n < 0 ? `${MINUS} ${-n}` : `+ ${n}`);
 export const fmtSignedCoef = c => {
   const abs = Math.abs(c);

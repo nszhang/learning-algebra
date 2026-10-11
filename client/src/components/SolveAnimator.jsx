@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  LEVELS, generateEquation, applyOp, cancelledIds,
+  LEVELS, ONE_STEP_KINDS, generateEquation, applyOp, cancelledIds,
   fmtSignedCoef, fmtSigned, termText
 } from '../lesson.js';
 
@@ -32,8 +32,10 @@ function Side({ terms, op, phase }) {
         {op.val !== 0 &&
           <span className={'term-chip op-chip' + (phase === 'cancel' ? ' chip-fade' : '')}>{fmtSigned(op.val)}</span>}
       </>)}
-      {(phase === 'op' || phase === 'cancel') && op && op.kind === 'div' && (
-        <div className={'div-bar' + (phase === 'cancel' ? ' chip-fade' : '')}>÷ {op.by}</div>
+      {(phase === 'op' || phase === 'cancel') && op && (op.kind === 'div' || op.kind === 'mul') && (
+        <div className={'div-bar' + (phase === 'cancel' ? ' chip-fade' : '')}>
+          {op.kind === 'div' ? '÷' : '×'} {op.by}
+        </div>
       )}
     </div>
   );
@@ -41,6 +43,7 @@ function Side({ terms, op, phase }) {
 
 export default function SolveAnimator({ toast, fireConfetti }) {
   const [level, setLevel] = useState(2);
+  const [kind, setKind] = useState('addsub');
   const [eq, setEq] = useState(() => generateEquation(2));
   const [left, setLeft] = useState(eq.left);
   const [right, setRight] = useState(eq.right);
@@ -90,8 +93,8 @@ export default function SolveAnimator({ toast, fireConfetti }) {
     return () => clearTimeout(t);
   });
 
-  function newEquation(lv = level) {
-    const e = generateEquation(lv);
+  function newEquation(lv = level, kd = kind) {
+    const e = generateEquation(lv, kd);
     setEq(e); setLeft(e.left); setRight(e.right);
     setStepIdx(0); setPhase('idle'); setPlaying(false); setPaused(false);
     setDone(false); setHistory([]);
@@ -134,6 +137,17 @@ export default function SolveAnimator({ toast, fireConfetti }) {
               </button>
             ))}
           </div>
+          {level === 1 && (
+            <div className="level-tabs" aria-label="equation type">
+              {ONE_STEP_KINDS.map(k => (
+                <button key={k.id} type="button"
+                  className={'role-tab' + (kind === k.id ? ' active' : '')}
+                  onClick={() => { setKind(k.id); newEquation(1, k.id); }}>
+                  {k.label}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="level-tabs">
             {Object.entries(SPEEDS).map(([id, s]) => (
               <button key={id} type="button"
