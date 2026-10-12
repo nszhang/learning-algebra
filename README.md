@@ -1,5 +1,16 @@
 # ∑ AlgebraAce
 
+> # ⚠️ This site has been retired
+>
+> **AlgebraAce and ExponentAce have graduated into [MathAce](https://math.pnpsolutions.ca/learn-math/)** —
+> the comprehensive K–12 platform (256 skills, Grades 1–12) that contains every skill from
+> both sites plus far more. All accounts, progress, and homework were migrated to the shared
+> database and remain fully intact at **https://math.pnpsolutions.ca/learn-math/**.
+>
+> The old URLs now 301-redirect there. This repository is preserved as a historical archive
+> and is no longer deployed or maintained. Active development continues in
+> [`nszhang/learn-math`](https://github.com/nszhang/learn-math).
+
 An interactive, IXL-inspired algebra learning platform. Students practice
 randomly generated algebra problems, climb an IXL-style **SmartScore (0–100)**
 on every skill, complete daily and teacher-assigned homework, and earn medals,
