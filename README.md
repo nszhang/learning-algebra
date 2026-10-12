@@ -172,3 +172,22 @@ the same code still runs from the repo root in dev (`npm run dev:*`).
 ```bash
 ./deploy.sh        # rsync → build on server → restart → health check
 ```
+
+
+---
+
+## 🌐 Site family
+
+This site shares its user database with its sisters — **one login works on all
+three** (accounts, passwords, and stars are unified; per-skill progress is
+namespaced per site):
+
+| Site | Focus | URL |
+|---|---|---|
+| **π MathAce** (flagship) | Grades 1–12, 256 skills, Desmos-style grapher | [math.pnpsolutions.ca/learn-math](https://math.pnpsolutions.ca/learn-math/) · [github.com/nszhang/learn-math](https://github.com/nszhang/learn-math) |
+| ∑ AlgebraAce | Algebra (17 skills) | [math.pnpsolutions.ca/learning-algebra](https://math.pnpsolutions.ca/learning-algebra/) |
+| xⁿ ExponentAce | Exponents & logarithms (16 skills) | [math.pnpsolutions.ca/learn-exponent-and-log](https://math.pnpsolutions.ca/learn-exponent-and-log/) |
+
+The **comprehensive platform documentation** (architecture, API reference,
+data model, deployment, content-authoring guide) lives in the flagship repo:
+[](https://github.com/nszhang/learn-math).
