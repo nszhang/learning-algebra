@@ -9,9 +9,7 @@
 #   systemd: learning-algebra.service   Express serves API + built client on 127.0.0.1:3004
 #   nginx:   /etc/nginx/conf.d/math.pnpsolutions.ca.conf
 #            location /learning-algebra/{,/api/} → proxy to :3004 (prefix stripped)
-#   Backups: /home/nzhang/scripts/website-backup.sh learning-algebra (daily 00:00
-#            Edmonton, files + pg dump) → /backup/learning-algebra →
-#            gs://luminous-return-219217-site-backups/learning-algebra/ (00:30)
+#   Backups: nightly files + pg dump (see server crontab for details)
 set -euo pipefail
 HOST=webapp01.pnpsolutions.ca
 APP=/var/www/learning-algebra
