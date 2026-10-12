@@ -190,4 +190,4 @@ namespaced per site):
 
 The **comprehensive platform documentation** (architecture, API reference,
 data model, deployment, content-authoring guide) lives in the flagship repo:
-[](https://github.com/nszhang/learn-math).
+`nszhang/learn-math` (https://github.com/nszhang/learn-math).
